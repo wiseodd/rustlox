@@ -6,7 +6,11 @@ use std::{
     process,
 };
 
+pub mod scanner;
+pub mod token;
+
 fn main() -> Result<()> {
+    let mut had_error = false;
     let args: Vec<String> = env::args().collect();
 
     // The first element of `args` is always the exec. path
@@ -15,20 +19,25 @@ fn main() -> Result<()> {
             println!("Usage: `rustlox [script]`");
             process::exit(64);
         }
-        Ordering::Equal => run_file(args[1].clone())?,
-        _ => run_prompt()?,
+        Ordering::Equal => run_file(args[1].clone(), had_error)?,
+        _ => run_prompt(had_error)?,
     };
 
     Ok(())
 }
 
-fn run_file(path: String) -> Result<()> {
+fn run_file(path: String, had_error: bool) -> Result<()> {
     let program: String = fs::read_to_string(path)?;
     run(program)?;
+
+    if had_error {
+        process::exit(65);
+    }
+
     Ok(())
 }
 
-fn run_prompt() -> Result<()> {
+fn run_prompt(mut had_error: bool) -> Result<()> {
     loop {
         print!("> ");
         io::stdout().flush()?;
@@ -40,7 +49,7 @@ fn run_prompt() -> Result<()> {
             Ok(_) => println!("{line}"), // TODO: the actual thing
         };
 
-        // TODO: run(line)?;
+        had_error = false;
     }
 
     Ok(())
@@ -49,4 +58,13 @@ fn run_prompt() -> Result<()> {
 // TODO: implement!
 fn run(source: String) -> Result<()> {
     todo!()
+}
+
+fn error(line: u32, message: String, mut had_error: bool) {
+    report(line, "".to_string(), message, had_error);
+}
+
+fn report(line: u32, loc: String, message: String, mut had_error: bool) {
+    println!("[Line {line}] Error {loc}: {message}");
+    had_error = true;
 }
