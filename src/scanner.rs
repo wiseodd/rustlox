@@ -1,4 +1,7 @@
-use crate::token::{Literal, Token, TokenType};
+use crate::{
+    lox::Lox,
+    token::{Literal, Token, TokenType},
+};
 
 pub struct Scanner {
     source: String,
@@ -96,7 +99,7 @@ impl Scanner {
             }
             '"' => self.add_string(),
             _ => {
-                if Scanner::is_digit(next_char) {
+                if next_char.is_ascii_digit() {
                     self.add_number();
                 } else {
                     println!("Unexpected character in line {}", self.line);
@@ -137,10 +140,6 @@ impl Scanner {
         }
     }
 
-    fn is_digit(c: char) -> bool {
-        c >= '0' && c <= '9'
-    }
-
     fn add_string(&mut self) {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
@@ -150,7 +149,7 @@ impl Scanner {
         }
 
         if self.is_at_end() {
-            println!("Unterminated string.");
+            Lox::error(self.line, "Unterminated");
             return;
         }
 
@@ -162,14 +161,14 @@ impl Scanner {
     }
 
     fn add_number(&mut self) {
-        while Scanner::is_digit(self.peek()) {
+        while self.peek().is_ascii_digit() {
             self.advance();
         }
 
-        if self.peek() == '.' && Scanner::is_digit(self.peek_next()) {
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             self.advance();
 
-            while Scanner::is_digit(self.peek()) {
+            while self.peek().is_ascii_digit() {
                 self.advance();
             }
         }

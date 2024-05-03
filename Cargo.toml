@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.82"
+rustyline = "14.0.0"
 strum_macros = "0.26.2"
