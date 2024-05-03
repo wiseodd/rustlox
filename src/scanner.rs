@@ -5,10 +5,11 @@ use crate::{
 
 pub struct Scanner {
     source: String,
-    pub tokens: Vec<Token>,
+    tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
+    in_comment_block: bool,
 }
 
 impl Scanner {
@@ -19,12 +20,39 @@ impl Scanner {
             start: 0,
             current: 0,
             line: 1,
+            in_comment_block: false,
         }
     }
 
-    pub fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) -> Option<&Vec<Token>> {
         while !self.is_at_end() {
             self.start = self.current;
+
+            if self.in_comment_block {
+                // Consume block (possibly multi-line) comment
+                while !self.is_at_end() {
+                    let c = self.advance();
+
+                    if c == '\n' {
+                        self.line += 1;
+                    } else if c == '*' && self.peek() == '/' {
+                        self.in_comment_block = false;
+                        break;
+                    }
+                }
+
+                if self.in_comment_block {
+                    // If after consuming everything above, we haven't found the closing "*/"
+                    // Then we throw an error.
+                    Lox::error(self.line, "Block comment never closed.");
+                    return None;
+                } else {
+                    // The above iter stopped at the closing '*'.
+                    // So, we consume the closing '\'.
+                    self.advance();
+                }
+            }
+
             self.scan_single_token();
         }
 
@@ -34,6 +62,8 @@ impl Scanner {
             Literal::None,
             self.line,
         ));
+
+        Some(&self.tokens)
     }
 
     fn is_at_end(&self) -> bool {
@@ -67,7 +97,16 @@ impl Scanner {
             '-' => self.add_token_no_lit(TokenType::Minus),
             '+' => self.add_token_no_lit(TokenType::Plus),
             ';' => self.add_token_no_lit(TokenType::Semicolon),
-            '*' => self.add_token_no_lit(TokenType::Star),
+            '*' => {
+                dbg!(next_char, self.current);
+                if self.current == 1 && self.peek_prev() == '/' {
+                    // Handle edge case where a comment block is at the
+                    // very start of the file
+                    self.in_comment_block = true;
+                } else {
+                    self.add_token_no_lit(TokenType::Star);
+                }
+            }
             '!' => match self.matches('=') {
                 true => self.add_token_no_lit(TokenType::BangEqual),
                 false => self.add_token_no_lit(TokenType::Bang),
@@ -84,24 +123,28 @@ impl Scanner {
                 true => self.add_token_no_lit(TokenType::LessEqual),
                 false => self.add_token_no_lit(TokenType::Less),
             },
-            '/' => match self.matches('/') {
-                // Read the whole comment line
-                true => {
+            '/' => {
+                if self.peek() == '*' {
+                    self.in_comment_block = true;
+                } else if self.matches('/') {
+                    // Consume the whole comment line
                     while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
+                } else {
+                    self.add_token_no_lit(TokenType::Slash);
                 }
-                false => self.add_token_no_lit(TokenType::Slash),
-            },
+            }
             ' ' | '\r' | '\t' => (), // Do nothing
             '\n' => {
                 self.line += 1;
             }
             '"' => self.add_string(),
-            'o' => match self.matches('r') {
-                true => self.add_token_no_lit(TokenType::Or),
-                _ => (),
-            },
+            'o' => {
+                if self.matches('r') {
+                    self.add_token_no_lit(TokenType::Or)
+                }
+            }
             _ => {
                 if next_char.is_ascii_digit() {
                     self.add_number();
@@ -133,17 +176,21 @@ impl Scanner {
     }
 
     fn peek(&self) -> char {
-        match self.is_at_end() {
-            true => '\0',
-            false => self.source.chars().nth(self.current).unwrap(),
+        match !self.is_at_end() {
+            true => self.source.chars().nth(self.current).unwrap(),
+            false => '\0',
         }
     }
 
     fn peek_next(&self) -> char {
-        match self.current + 1 >= self.source.len() {
-            true => '\0',
-            false => self.source.chars().nth(self.current + 1).unwrap(),
+        match self.current + 1 < self.source.len() {
+            true => self.source.chars().nth(self.current + 1).unwrap(),
+            false => '\0',
         }
+    }
+
+    fn peek_prev(&self) -> char {
+        self.source.chars().nth(self.current - 1).unwrap()
     }
 
     fn add_string(&mut self) {
@@ -179,8 +226,7 @@ impl Scanner {
             }
         }
 
-        let parsing_res = (&self.source[self.start..self.current]).parse::<f64>();
-        match parsing_res {
+        match (&self.source[self.start..self.current]).parse::<f64>() {
             Ok(val) => self.add_token(TokenType::Number, Literal::Number(val)),
             Err(err) => println!("{err:?}"),
         }

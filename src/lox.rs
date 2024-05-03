@@ -1,10 +1,11 @@
-use crate::{scanner::Scanner, token::Token};
+use crate::scanner::Scanner;
 use anyhow::Result;
 use rustyline::error::ReadlineError;
 use std::{fs, process};
 
 static mut HAD_ERROR: bool = false;
 
+#[derive(Default)]
 pub struct Lox {}
 
 impl Lox {
@@ -14,7 +15,7 @@ impl Lox {
 
     pub fn run_file(&mut self, path: String) -> Result<()> {
         let program: String = fs::read_to_string(path)?;
-        self.run(program)?;
+        self.run(program);
 
         unsafe {
             if HAD_ERROR {
@@ -30,7 +31,7 @@ impl Lox {
 
         loop {
             match rl.readline("\n>> ") {
-                Ok(line) => self.run(line)?,
+                Ok(line) => self.run(line),
                 Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
                     println!("Kill signal received. Exiting...");
                     break;
@@ -46,16 +47,13 @@ impl Lox {
         Ok(())
     }
 
-    pub fn run(&mut self, source: String) -> Result<()> {
+    pub fn run(&mut self, source: String) {
         let mut scanner: Scanner = Scanner::new(source);
-        scanner.scan_tokens();
-        let tokens: Vec<Token> = scanner.tokens;
-
-        for token in tokens {
-            println!("{token}");
+        if let Some(tokens) = scanner.scan_tokens() {
+            for token in tokens {
+                println!("{token}");
+            }
         }
-
-        Ok(())
     }
 
     pub fn error(line: usize, message: &str) {
