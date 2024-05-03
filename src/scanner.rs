@@ -1,8 +1,8 @@
-use crate::token::{Token, TokenType};
+use crate::token::{Literal, Token, TokenType};
 
 pub struct Scanner {
     source: String,
-    tokens: Vec<Token>,
+    pub tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
@@ -22,28 +22,13 @@ impl Scanner {
     pub fn scan_tokens(&mut self) {
         while !self.is_at_end() {
             self.start = self.current;
-
-            let token_type: Option<TokenType> = self.scan_single_token();
-
-            if token_type.is_none() {
-                continue;
-            }
-
-            let token_type: TokenType = token_type.unwrap();
-            let literal: Option<String> = match token_type {
-                TokenType::String => self.get_string().clone(),
-                _ => None,
-            };
-            let text: &str = &self.source[self.start..self.current];
-
-            self.tokens
-                .push(Token::new(token_type, text.to_string(), literal, self.line));
+            self.scan_single_token();
         }
 
         self.tokens.push(Token::new(
             TokenType::Eof,
             "".to_string(),
-            Option::None,
+            Literal::None,
             self.line,
         ));
     }
@@ -52,35 +37,49 @@ impl Scanner {
         self.current >= self.source.len()
     }
 
-    fn scan_single_token(&mut self) -> Option<TokenType> {
+    fn add_token_no_lit(&mut self, token_type: TokenType) {
+        self.add_token(token_type, Literal::None)
+    }
+
+    fn add_token(&mut self, token_type: TokenType, literal: Literal) {
+        let lexeme: &str = &self.source[self.start..self.current];
+        self.tokens.push(Token::new(
+            token_type,
+            lexeme.to_string(),
+            literal,
+            self.line,
+        ))
+    }
+
+    fn scan_single_token(&mut self) {
         let next_char: char = self.advance();
 
-        let token_type: Option<TokenType> = match next_char {
-            '(' => Some(TokenType::LeftParen),
-            ')' => Some(TokenType::RightParen),
-            '{' => Some(TokenType::LeftBrace),
-            '}' => Some(TokenType::RightBrace),
-            ',' => Some(TokenType::Comma),
-            '.' => Some(TokenType::Dot),
-            '-' => Some(TokenType::Minus),
-            '+' => Some(TokenType::Plus),
-            ';' => Some(TokenType::Semicolon),
-            '*' => Some(TokenType::Star),
+        match next_char {
+            '(' => self.add_token_no_lit(TokenType::LeftParen),
+            ')' => self.add_token_no_lit(TokenType::RightParen),
+            '{' => self.add_token_no_lit(TokenType::LeftBrace),
+            '}' => self.add_token_no_lit(TokenType::RightBrace),
+            ',' => self.add_token_no_lit(TokenType::Comma),
+            '.' => self.add_token_no_lit(TokenType::Dot),
+            '-' => self.add_token_no_lit(TokenType::Minus),
+            '+' => self.add_token_no_lit(TokenType::Plus),
+            ';' => self.add_token_no_lit(TokenType::Semicolon),
+            '*' => self.add_token_no_lit(TokenType::Star),
             '!' => match self.matches('=') {
-                true => Some(TokenType::BangEqual),
-                false => Some(TokenType::Bang),
+                true => self.add_token_no_lit(TokenType::BangEqual),
+                false => self.add_token_no_lit(TokenType::Bang),
             },
             '=' => match self.matches('=') {
-                true => Some(TokenType::EqualEqual),
-                false => Some(TokenType::Equal),
+                true => self.add_token_no_lit(TokenType::EqualEqual),
+                false => self.add_token_no_lit(TokenType::Equal),
             },
             '>' => match self.matches('=') {
-                true => Some(TokenType::GreaterEqual),
-                false => Some(TokenType::Greater),
+                true => self.add_token_no_lit(TokenType::GreaterEqual),
+                false => self.add_token_no_lit(TokenType::Greater),
             },
             '<' => match self.matches('=') {
-                true => Some(TokenType::LessEqual),
-                false => Some(TokenType::Less),
+                true => self.add_token_no_lit(TokenType::LessEqual),
+                false => self.add_token_no_lit(TokenType::Less),
             },
             '/' => match self.matches('/') {
                 // Read the whole comment line
@@ -88,20 +87,22 @@ impl Scanner {
                     while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
-                    None
                 }
-                false => Some(TokenType::Slash),
+                false => self.add_token_no_lit(TokenType::Slash),
             },
-            ' ' | '\r' | '\t' => None,
+            ' ' | '\r' | '\t' => (), // Do nothing
             '\n' => {
                 self.line += 1;
-                None
             }
-            '"' => Some(TokenType::String),
-            _ => unreachable!(),
+            '"' => self.add_string(),
+            _ => {
+                if Scanner::is_digit(next_char) {
+                    self.add_number();
+                } else {
+                    println!("Unexpected character in line {}", self.line);
+                }
+            }
         };
-
-        token_type
     }
 
     fn advance(&mut self) -> char {
@@ -129,7 +130,18 @@ impl Scanner {
         }
     }
 
-    fn get_string(&mut self) -> Option<String> {
+    fn peek_next(&self) -> char {
+        match self.current + 1 >= self.source.len() {
+            true => '\0',
+            false => self.source.chars().nth(self.current + 1).unwrap(),
+        }
+    }
+
+    fn is_digit(c: char) -> bool {
+        c >= '0' && c <= '9'
+    }
+
+    fn add_string(&mut self) {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
@@ -139,13 +151,33 @@ impl Scanner {
 
         if self.is_at_end() {
             println!("Unterminated string.");
-            return None;
+            return;
         }
 
         self.advance(); // Move cursor to the closing "
 
         // Trim the quotes, get the string itself
-        let value: &str = &self.source[(self.start + 1)..(self.current - 1)];
-        Some(value.to_string())
+        let lit_val: &str = &self.source[(self.start + 1)..(self.current - 1)];
+        self.add_token(TokenType::String, Literal::String(lit_val.to_string()));
+    }
+
+    fn add_number(&mut self) {
+        while Scanner::is_digit(self.peek()) {
+            self.advance();
+        }
+
+        if self.peek() == '.' && Scanner::is_digit(self.peek_next()) {
+            self.advance();
+
+            while Scanner::is_digit(self.peek()) {
+                self.advance();
+            }
+        }
+
+        let parsing_res = (&self.source[self.start..self.current]).parse::<f64>();
+        match parsing_res {
+            Ok(val) => self.add_token(TokenType::Number, Literal::Number(val)),
+            Err(err) => println!("{err:?}"),
+        }
     }
 }

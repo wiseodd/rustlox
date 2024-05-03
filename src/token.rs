@@ -48,20 +48,22 @@ pub enum TokenType {
     Eof,
 }
 
+#[derive(strum_macros::Display)]
+pub enum Literal {
+    String(String),
+    Number(f64),
+    None,
+}
+
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
-    literal: Option<String>,
+    literal: Literal,
     line: usize,
 }
 
 impl Token {
-    pub fn new(
-        token_type: TokenType,
-        lexeme: String,
-        literal: Option<String>,
-        line: usize,
-    ) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Literal, line: usize) -> Self {
         Self {
             token_type,
             lexeme,
@@ -73,6 +75,6 @@ impl Token {
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {} {:?}", self.token_type, self.lexeme, self.literal)
+        write!(f, "{} {} {}", self.token_type, self.lexeme, self.literal)
     }
 }
