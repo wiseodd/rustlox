@@ -98,9 +98,15 @@ impl Scanner {
                 self.line += 1;
             }
             '"' => self.add_string(),
+            'o' => match self.matches('r') {
+                true => self.add_token_no_lit(TokenType::Or),
+                _ => (),
+            },
             _ => {
                 if next_char.is_ascii_digit() {
                     self.add_number();
+                } else if Scanner::is_alpha(next_char) {
+                    self.add_identifier();
                 } else {
                     println!("Unexpected character in line {}", self.line);
                 }
@@ -177,6 +183,47 @@ impl Scanner {
         match parsing_res {
             Ok(val) => self.add_token(TokenType::Number, Literal::Number(val)),
             Err(err) => println!("{err:?}"),
+        }
+    }
+
+    fn add_identifier(&mut self) {
+        while Scanner::is_alphanumeric(self.peek()) {
+            self.advance();
+        }
+
+        let text: &str = &self.source[self.start..self.current];
+        let token_type: TokenType = Scanner::text2token(text);
+
+        self.add_token_no_lit(token_type);
+    }
+
+    fn is_alpha(c: char) -> bool {
+        c.is_ascii_alphabetic() || c == '_'
+    }
+
+    fn is_alphanumeric(c: char) -> bool {
+        c.is_ascii_digit() || Scanner::is_alpha(c)
+    }
+
+    fn text2token(text: &str) -> TokenType {
+        match text {
+            "and" => TokenType::And,
+            "class" => TokenType::Class,
+            "else" => TokenType::Else,
+            "false" => TokenType::False,
+            "for" => TokenType::For,
+            "fn" => TokenType::Fn,
+            "if" => TokenType::If,
+            "nil" => TokenType::Nil,
+            "or" => TokenType::Or,
+            "print" => TokenType::Print,
+            "return" => TokenType::Return,
+            "super" => TokenType::Super,
+            "this" => TokenType::This,
+            "true" => TokenType::True,
+            "var" => TokenType::Var,
+            "while" => TokenType::While,
+            _ => TokenType::Identifier,
         }
     }
 }

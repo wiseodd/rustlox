@@ -29,7 +29,7 @@ impl Lox {
         let mut rl = rustyline::DefaultEditor::new()?;
 
         loop {
-            let _ = match rl.readline(">> ") {
+            match rl.readline("\n>> ") {
                 Ok(line) => self.run(line)?,
                 Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
                     println!("Kill signal received. Exiting...");
