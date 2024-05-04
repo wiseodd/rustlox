@@ -1,4 +1,6 @@
 use crate::{
+    expr::Expr,
+    parser::Parser,
     scanner::Scanner,
     token::{Token, TokenType},
 };
@@ -52,9 +54,14 @@ impl Lox {
 
     pub fn run(&mut self, source: String) {
         let mut scanner: Scanner = Scanner::new(source);
-        if let Some(tokens) = scanner.scan_tokens() {
-            for token in tokens {
-                println!("{token}");
+        let tokens: Vec<Token> = scanner.scan_tokens().unwrap().clone();
+
+        let mut parser: Parser = Parser::new(tokens);
+        let expression: Expr = parser.parse().unwrap();
+
+        unsafe {
+            if HAD_ERROR {
+                return;
             }
         }
     }

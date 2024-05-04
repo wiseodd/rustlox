@@ -151,7 +151,7 @@ impl Scanner {
                 } else if Scanner::is_alpha(next_char) {
                     self.add_identifier();
                 } else {
-                    println!("Unexpected character in line {}", self.line);
+                    Lox::error(self.line, "Unexpected character.");
                 }
             }
         };
