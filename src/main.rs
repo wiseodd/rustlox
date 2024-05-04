@@ -3,7 +3,9 @@ use lox::Lox;
 
 use std::{cmp::Ordering, env, process};
 
+pub mod expr;
 pub mod lox;
+pub mod parser;
 pub mod scanner;
 pub mod token;
 

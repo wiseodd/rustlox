@@ -1,5 +1,8 @@
-use crate::scanner::Scanner;
-use anyhow::Result;
+use crate::{
+    scanner::Scanner,
+    token::{Token, TokenType},
+};
+use anyhow::{anyhow, Result};
 use rustyline::error::ReadlineError;
 use std::{fs, process};
 
@@ -36,7 +39,7 @@ impl Lox {
                     println!("Kill signal received. Exiting...");
                     break;
                 }
-                Err(err) => println!("Error: {err:?}"),
+                Err(err) => return Err(anyhow!("Error: {err:?}")),
             };
 
             unsafe {
@@ -58,6 +61,13 @@ impl Lox {
 
     pub fn error(line: usize, message: &str) {
         Lox::report(line, "", message);
+    }
+
+    pub fn parse_error(token: &Token, message: &str) {
+        match token.token_type {
+            TokenType::Eof => Lox::report(token.line, " at end", message),
+            _ => Lox::report(token.line, &format!(" at '{}'", token.lexeme), message),
+        }
     }
 
     pub fn report(line: usize, loc: &str, message: &str) {
