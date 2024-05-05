@@ -1,4 +1,5 @@
 use crate::{
+    ast,
     expr::Expr,
     parser::Parser,
     scanner::Scanner,
@@ -64,6 +65,8 @@ impl Lox {
                 return;
             }
         }
+
+        println!("{}", ast::print(expression));
     }
 
     pub fn error(line: usize, message: &str) {
@@ -72,8 +75,8 @@ impl Lox {
 
     pub fn parse_error(token: &Token, message: &str) {
         match token.token_type {
-            TokenType::Eof => Lox::report(token.line, " at end", message),
-            _ => Lox::report(token.line, &format!(" at '{}'", token.lexeme), message),
+            TokenType::Eof => Lox::report(token.line, "at end", message),
+            _ => Lox::report(token.line, &format!("at '{}'", token.lexeme), message),
         }
     }
 

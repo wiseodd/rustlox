@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(strum_macros::Display, PartialEq, Clone)]
+#[derive(strum_macros::Display, PartialEq, Clone, Debug)]
 pub enum TokenType {
     // Single-character tokens
     LeftParen,
@@ -48,7 +48,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(strum_macros::Display, Clone)]
+#[derive(strum_macros::Display, Clone, Debug)]
 pub enum Literal {
     String(String),
     Number(f64),
@@ -56,7 +56,7 @@ pub enum Literal {
     None,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,

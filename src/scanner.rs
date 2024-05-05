@@ -98,7 +98,6 @@ impl Scanner {
             '+' => self.add_token_no_lit(TokenType::Plus),
             ';' => self.add_token_no_lit(TokenType::Semicolon),
             '*' => {
-                dbg!(next_char, self.current);
                 if self.current == 1 && self.peek_prev() == '/' {
                     // Handle edge case where a comment block is at the
                     // very start of the file
