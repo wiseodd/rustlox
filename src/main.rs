@@ -5,6 +5,7 @@ use std::{cmp::Ordering, env, process};
 
 pub mod ast;
 pub mod expr;
+pub mod interpreter;
 pub mod lox;
 pub mod parser;
 pub mod scanner;
