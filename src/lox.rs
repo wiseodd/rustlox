@@ -1,6 +1,7 @@
 use crate::{
     ast,
     expr::Expr,
+    interpreter,
     parser::Parser,
     scanner::Scanner,
     token::{Token, TokenType},
@@ -10,6 +11,7 @@ use rustyline::error::ReadlineError;
 use std::{fs, process};
 
 static mut HAD_ERROR: bool = false;
+static mut HAD_RUNTIME_ERROR: bool = false;
 
 #[derive(Default)]
 pub struct Lox {}
@@ -26,6 +28,9 @@ impl Lox {
         unsafe {
             if HAD_ERROR {
                 process::exit(65);
+            }
+            if HAD_RUNTIME_ERROR {
+                process::exit(70);
             }
         }
 
@@ -58,7 +63,7 @@ impl Lox {
         let tokens: Vec<Token> = scanner.scan_tokens().unwrap().clone();
 
         let mut parser: Parser = Parser::new(tokens);
-        let expression: Expr = parser.parse().unwrap();
+        let expression: Option<Expr> = parser.parse();
 
         unsafe {
             if HAD_ERROR {
@@ -66,7 +71,11 @@ impl Lox {
             }
         }
 
-        println!("{}", ast::print(expression));
+        // Safe to do
+        let expression: Expr = expression.unwrap();
+
+        // println!("{}", ast::print(expression));
+        interpreter::interpret(&expression);
     }
 
     pub fn error(line: usize, message: &str) {
@@ -77,6 +86,17 @@ impl Lox {
         match token.token_type {
             TokenType::Eof => Lox::report(token.line, "at end", message),
             _ => Lox::report(token.line, &format!("at '{}'", token.lexeme), message),
+        }
+    }
+
+    pub fn runtime_error(token: Option<Token>, message: &str) {
+        match token {
+            Some(token) => println!("{}\n[line {}]", message, token.line),
+            None => println!("{}", message),
+        }
+
+        unsafe {
+            HAD_RUNTIME_ERROR = true;
         }
     }
 

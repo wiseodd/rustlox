@@ -1,14 +1,11 @@
 use anyhow::Result;
 
 use crate::{
+    error::ParseError,
     expr::Expr,
     lox::Lox,
     token::{Literal, Token, TokenType},
 };
-
-pub enum LoxError {
-    ParseError,
-}
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -28,12 +25,12 @@ impl Parser {
     }
 
     // expression -> equality ;
-    fn expression(&mut self) -> Result<Expr, LoxError> {
+    fn expression(&mut self) -> Result<Expr, ParseError> {
         self.equality()
     }
 
     // comparison ( ( "!=" | "==" ) comparison )* ;
-    fn equality(&mut self) -> Result<Expr, LoxError> {
+    fn equality(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.comparison()?;
 
         while self.is_match_advance(&[TokenType::BangEqual, TokenType::EqualEqual]) {
@@ -51,7 +48,7 @@ impl Parser {
     }
 
     // term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-    fn comparison(&mut self) -> Result<Expr, LoxError> {
+    fn comparison(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.term()?;
 
         while self.is_match_advance(&[
@@ -74,7 +71,7 @@ impl Parser {
     }
 
     // factor ( ( "-" | "+" ) factor )* ;
-    fn term(&mut self) -> Result<Expr, LoxError> {
+    fn term(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.factor()?;
 
         while self.is_match_advance(&[TokenType::Minus, TokenType::Plus]) {
@@ -92,7 +89,7 @@ impl Parser {
     }
 
     // unary ( ( "/" | "*" ) unary )* ;
-    fn factor(&mut self) -> Result<Expr, LoxError> {
+    fn factor(&mut self) -> Result<Expr, ParseError> {
         let mut expr: Expr = self.unary()?;
 
         while self.is_match_advance(&[TokenType::Slash, TokenType::Star]) {
@@ -110,7 +107,7 @@ impl Parser {
     }
 
     // ( ( "!" | "-" ) unary ) | primary ;
-    fn unary(&mut self) -> Result<Expr, LoxError> {
+    fn unary(&mut self) -> Result<Expr, ParseError> {
         if self.is_match_advance(&[TokenType::Bang, TokenType::Minus]) {
             let operator: Token = self.previous().clone();
             let expr: Expr = self.unary()?;
@@ -125,7 +122,7 @@ impl Parser {
     }
 
     // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
-    fn primary(&mut self) -> Result<Expr, LoxError> {
+    fn primary(&mut self) -> Result<Expr, ParseError> {
         if self.is_match_advance(&[TokenType::Number, TokenType::String]) {
             return Ok(Expr::Literal {
                 value: self.previous().literal.clone(),
@@ -202,7 +199,7 @@ impl Parser {
         self.tokens.get(self.current - 1).unwrap()
     }
 
-    fn consume(&mut self, token_type: TokenType, message: &str) -> Result<Token, LoxError> {
+    fn consume(&mut self, token_type: TokenType, message: &str) -> Result<Token, ParseError> {
         if self.check(&token_type) {
             return Ok(self.advance().clone());
         }
@@ -210,9 +207,9 @@ impl Parser {
         Err(Self::error(self.peek(), message))
     }
 
-    fn error(token: &Token, message: &str) -> LoxError {
+    fn error(token: &Token, message: &str) -> ParseError {
         Lox::parse_error(token, message);
-        LoxError::ParseError
+        ParseError {}
     }
 
     fn synchronize(&mut self) {
