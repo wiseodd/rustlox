@@ -51,15 +51,3 @@ pub enum Expr {
         name: Token,
     },
 }
-
-pub enum Stmt {
-    Block(Vec<Box<Stmt>>),
-    Class(Token, Expr),
-    Expression(Expr),
-    Function(Token, Vec<Token>, Vec<Box<Stmt>>),
-    If(Expr, Box<Stmt>, Box<Stmt>),
-    Print(Expr),
-    Return(Token, Expr),
-    Var(Token, Expr),
-    While(Expr, Box<Stmt>),
-}

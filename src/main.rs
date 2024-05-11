@@ -10,6 +10,7 @@ pub mod interpreter;
 pub mod lox;
 pub mod parser;
 pub mod scanner;
+pub mod stmt;
 pub mod token;
 
 fn main() -> Result<()> {

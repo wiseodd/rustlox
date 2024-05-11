@@ -158,8 +158,8 @@ impl Parser {
         Err(Self::error(self.peek(), "Expect expression."))
     }
 
-    // ------------------------ Utility functions ---------------------------
-    // ----------------------------------------------------------------------
+    // ------------------------------ Utility functions --------------------------------
+    // ---------------------------------------------------------------------------------
 
     fn is_match_advance(&mut self, token_types: &[TokenType]) -> bool {
         for token_type in token_types {
