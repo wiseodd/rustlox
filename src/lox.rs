@@ -1,6 +1,5 @@
 use crate::{
-    error::ParseError,
-    interpreter,
+    interpreter::Interpreter,
     parser::Parser,
     scanner::Scanner,
     stmt::Stmt,
@@ -14,11 +13,15 @@ static mut HAD_ERROR: bool = false;
 static mut HAD_RUNTIME_ERROR: bool = false;
 
 #[derive(Default)]
-pub struct Lox {}
+pub struct Lox {
+    interpreter: Interpreter,
+}
 
 impl Lox {
     pub fn new() -> Self {
-        Lox {}
+        Lox {
+            interpreter: Interpreter::new(),
+        }
     }
 
     pub fn run_file(&mut self, path: String) -> Result<()> {
@@ -71,7 +74,7 @@ impl Lox {
             }
         }
 
-        interpreter::interpret(statements);
+        self.interpreter.interpret(statements);
     }
 
     pub fn error(line: usize, message: &str) {

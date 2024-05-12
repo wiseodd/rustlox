@@ -4,6 +4,7 @@ use lox::Lox;
 use std::{cmp::Ordering, env, process};
 
 pub mod ast;
+pub mod environment;
 pub mod error;
 pub mod expr;
 pub mod interpreter;
