@@ -1,9 +1,10 @@
 use crate::{
-    ast,
+    error::ParseError,
     expr::Expr,
     interpreter,
     parser::Parser,
     scanner::Scanner,
+    stmt::Stmt,
     token::{Token, TokenType},
 };
 use anyhow::{anyhow, Result};
@@ -63,7 +64,7 @@ impl Lox {
         let tokens: Vec<Token> = scanner.scan_tokens().unwrap().clone();
 
         let mut parser: Parser = Parser::new(tokens);
-        let expression: Option<Expr> = parser.parse();
+        let statements: Result<Vec<Option<Stmt>>, ParseError> = parser.parse();
 
         unsafe {
             if HAD_ERROR {
@@ -72,10 +73,9 @@ impl Lox {
         }
 
         // Safe to do
-        let expression: Expr = expression.unwrap();
+        let statements: Vec<Option<Stmt>> = statements.unwrap();
 
-        // println!("{}", ast::print(expression));
-        interpreter::interpret(&expression);
+        interpreter::interpret(statements);
     }
 
     pub fn error(line: usize, message: &str) {

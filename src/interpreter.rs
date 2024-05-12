@@ -4,34 +4,27 @@ use crate::{
     error::RuntimeError,
     expr::Expr,
     lox::Lox,
+    stmt::Stmt,
     token::{Literal, TokenType},
 };
 
-pub fn interpret(expr: &Expr) {
-    let res: Result<Literal, RuntimeError> = evaluate(expr);
+pub fn interpret(statements: Vec<Option<Stmt>>) {
+    for stmt in statements.into_iter().flatten() {
+        execute(&stmt);
+    }
+}
 
-    match res {
-        Ok(lit) => {
-            // Stringify
-            let value_str: String = match lit {
-                Literal::None => "nil".to_owned(),
-                Literal::Number(val) => {
-                    // Integers are also stored as doubles.
-                    // So we need to cast back.
-                    let val_str: String = val.to_string();
-
-                    match val_str.strip_suffix(".0") {
-                        Some(stripped) => stripped.to_owned(),
-                        None => val_str,
-                    }
-                }
-                Literal::Boolean(val) => val.to_string(),
-                Literal::String(val) => val,
-            };
-
-            println!("{value_str}")
-        }
-        Err(error) => Lox::runtime_error(error.token, &error.message),
+fn execute(stmt: &Stmt) {
+    match stmt {
+        Stmt::Expression { expression: expr } => match evaluate(expr) {
+            Ok(_) => (),
+            Err(error) => Lox::runtime_error(error.token, &error.message),
+        },
+        Stmt::Print { expression: expr } => match evaluate(expr) {
+            Ok(lit) => println!("{}", stringify(lit)),
+            Err(error) => Lox::runtime_error(error.token, &error.message),
+        },
+        _ => unreachable!(),
     }
 }
 
@@ -174,6 +167,25 @@ fn is_equal(a: Literal, b: Literal) -> bool {
         (_, Literal::None) => false,
         (Literal::Number(val1), Literal::Number(val2)) => val1 == val2,
         (Literal::String(val1), Literal::String(val2)) => val1 == val2,
+        (Literal::Boolean(val1), Literal::Boolean(val2)) => val1 == val2,
         _ => false,
+    }
+}
+
+fn stringify(lit: Literal) -> String {
+    match lit {
+        Literal::None => "nil".to_owned(),
+        Literal::Number(val) => {
+            // Integers are also stored as doubles.
+            // So we need to cast back.
+            let val_str: String = val.to_string();
+
+            match val_str.strip_suffix(".0") {
+                Some(stripped) => stripped.to_owned(),
+                None => val_str,
+            }
+        }
+        Literal::Boolean(val) => val.to_string(),
+        Literal::String(val) => val,
     }
 }
