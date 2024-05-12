@@ -19,17 +19,53 @@ impl Parser {
     }
 
     // program -> statement* EOF ;
-    pub fn parse(&mut self) -> Result<Vec<Option<Stmt>>, ParseError> {
+    pub fn parse(&mut self) -> Vec<Option<Stmt>> {
         let mut statements: Vec<Option<Stmt>> = vec![];
 
         while !self.is_at_end() {
-            statements.push(match self.statement() {
-                Ok(val) => val,
-                Err(error) => return Err(error),
-            });
+            statements.push(self.declaration());
         }
 
-        Ok(statements)
+        statements
+    }
+
+    // declaration -> varDecl | statement ;
+    fn declaration(&mut self) -> Option<Stmt> {
+        if self.is_match_advance(&[TokenType::Var]) {
+            return match self.var_declaration() {
+                Ok(stmt) => Some(stmt),
+                Err(_) => {
+                    self.synchronize();
+                    None
+                }
+            };
+        }
+
+        match self.statement() {
+            Ok(some_stmt) => some_stmt,
+            Err(_) => {
+                self.synchronize();
+                None
+            }
+        }
+    }
+
+    // varDecl -> "var" IDENTIFIER ( "=" expression )? ";" ;
+    fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let name: Token = self.consume(TokenType::Identifier, "Expect variable name.")?;
+
+        let initializer: Option<Expr> = if self.is_match_advance(&[TokenType::Equal]) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+        )?;
+
+        Ok(Stmt::Var { name, initializer })
     }
 
     // statement -> exprStmt | printStmt ;
@@ -183,6 +219,12 @@ impl Parser {
             self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
             return Ok(Expr::Grouping {
                 expression: Box::new(expr),
+            });
+        }
+
+        if self.is_match_advance(&[TokenType::Identifier]) {
+            return Ok(Expr::Variable {
+                name: self.previous().to_owned(),
             });
         }
 

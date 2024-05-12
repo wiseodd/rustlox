@@ -63,16 +63,13 @@ impl Lox {
         let tokens: Vec<Token> = scanner.scan_tokens().unwrap().clone();
 
         let mut parser: Parser = Parser::new(tokens);
-        let statements: Result<Vec<Option<Stmt>>, ParseError> = parser.parse();
+        let statements: Vec<Option<Stmt>> = parser.parse();
 
         unsafe {
             if HAD_ERROR {
                 return;
             }
         }
-
-        // Safe to do
-        let statements: Vec<Option<Stmt>> = statements.unwrap();
 
         interpreter::interpret(statements);
     }
