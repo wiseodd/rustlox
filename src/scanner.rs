@@ -225,7 +225,7 @@ impl Scanner {
             }
         }
 
-        match (&self.source[self.start..self.current]).parse::<f64>() {
+        match (self.source[self.start..self.current]).parse::<f64>() {
             Ok(val) => self.add_token(TokenType::Number, Literal::Number(val)),
             Err(err) => println!("{err:?}"),
         }

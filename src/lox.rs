@@ -1,6 +1,5 @@
 use crate::{
     error::ParseError,
-    expr::Expr,
     interpreter,
     parser::Parser,
     scanner::Scanner,

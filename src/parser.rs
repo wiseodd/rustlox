@@ -44,14 +44,14 @@ impl Parser {
     // exprStmt -> expression ";" ;
     fn expression_statement(&mut self) -> Result<Option<Stmt>, ParseError> {
         let expr: Expr = self.expression()?;
-        self.consume(TokenType::Semicolon, "Expect ';' after expression.");
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Some(Stmt::Expression { expression: expr }))
     }
 
     // printStmt -> "print" expression ";" ;
     fn print_statement(&mut self) -> Result<Option<Stmt>, ParseError> {
         let expr: Expr = self.expression()?;
-        self.consume(TokenType::Semicolon, "Expect ';' after expression.");
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Some(Stmt::Print { expression: expr }))
     }
 
@@ -180,7 +180,7 @@ impl Parser {
 
         if self.is_match_advance(&[TokenType::LeftParen]) {
             let expr: Expr = self.expression()?;
-            self.consume(TokenType::RightParen, "Expect ')' after expression.");
+            self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
             return Ok(Expr::Grouping {
                 expression: Box::new(expr),
             });
