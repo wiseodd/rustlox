@@ -344,10 +344,10 @@ impl Parser {
                 | TokenType::Return
                 | TokenType::Var
                 | TokenType::While => return,
-                _ => continue,
+                _ => (),
             }
-        }
 
-        self.advance();
+            self.advance();
+        }
     }
 }

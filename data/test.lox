@@ -8,7 +8,7 @@ var c = "global c";
 
   {
     var a = "inner a";
-    print a b;
+    print a;
     print b;
     print c;
   }
