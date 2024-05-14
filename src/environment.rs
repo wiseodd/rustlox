@@ -5,14 +5,16 @@ use crate::{
     token::{Literal, Token},
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Environment {
+    enclosing: Option<Box<Environment>>,
     values: HashMap<String, Literal>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
+    pub fn new(enclosing: Option<Environment>) -> Self {
         Environment {
+            enclosing: enclosing.map(Box::new),
             values: HashMap::new(),
         }
     }
@@ -24,10 +26,16 @@ impl Environment {
     pub fn get(&self, var_name: &Token) -> Result<Literal, RuntimeError> {
         match self.values.get(&var_name.lexeme) {
             Some(val) => Ok(val.to_owned()),
-            None => Err(RuntimeError {
-                message: format!("Undefined variable '{}'.", var_name.lexeme),
-                token: Some(var_name.to_owned()),
-            }),
+            None => {
+                if let Some(env) = self.enclosing.to_owned() {
+                    return env.get(var_name);
+                }
+
+                Err(RuntimeError {
+                    message: format!("Undefined variable '{}'.", var_name.lexeme),
+                    token: Some(var_name.to_owned()),
+                })
+            }
         }
     }
 
@@ -37,10 +45,16 @@ impl Environment {
                 self.values.insert(var_name.lexeme.to_owned(), value);
                 Ok(())
             }
-            false => Err(RuntimeError {
-                message: format!("Undefined variable '{}'", var_name.lexeme),
-                token: Some(var_name.to_owned()),
-            }),
+            false => {
+                if let Some(mut env) = self.enclosing.to_owned() {
+                    return env.assign(var_name, value);
+                }
+
+                Err(RuntimeError {
+                    message: format!("Undefined variable '{}'", var_name.lexeme),
+                    token: Some(var_name.to_owned()),
+                })
+            }
         }
     }
 }

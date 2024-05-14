@@ -1,13 +1,24 @@
-/* This is a block comment
- * Which is multiline!
- */
-var x = 123.3;
-var str = "mamamia";
+var a = "global a";
+var b = "global b";
+var c = "global c";
 
-/* asdonasd 
- * asdasdsa */
-while
+{
+  var a = "outer a";
+  var b = "outer b";
 
-/* asdasdsa
- * asdsad
-*/
+  {
+    var a = "inner a";
+    print a b;
+    print b;
+    print c;
+  }
+
+  print a;
+  print b;
+  print c;
+}
+
+print a;
+print b;
+print c;
+

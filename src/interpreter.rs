@@ -17,7 +17,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
-            environment: Environment::new(),
+            environment: Environment::new(None),
         }
     }
 
@@ -47,6 +47,17 @@ impl Interpreter {
                 };
 
                 self.environment.define(name.lexeme.to_owned(), value);
+            }
+            Stmt::Block { statements } => {
+                let env: Environment = Environment::new(Some(self.environment.clone()));
+                let previous: Environment = self.environment.clone();
+                self.environment = env;
+
+                for stmt in statements.to_owned().iter().flatten() {
+                    self.execute(stmt);
+                }
+
+                self.environment = previous;
             }
             _ => unreachable!(),
         }

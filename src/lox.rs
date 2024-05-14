@@ -55,6 +55,7 @@ impl Lox {
 
             unsafe {
                 HAD_ERROR = false;
+                HAD_RUNTIME_ERROR = false;
             }
         }
 

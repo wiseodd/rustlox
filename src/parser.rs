@@ -68,10 +68,16 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
-    // statement -> exprStmt | printStmt ;
+    // statement -> exprStmt | printStmt | block ;
     fn statement(&mut self) -> Result<Option<Stmt>, ParseError> {
         if self.is_match_advance(&[TokenType::Print]) {
             return self.print_statement();
+        }
+
+        if self.is_match_advance(&[TokenType::LeftBrace]) {
+            return Ok(Some(Stmt::Block {
+                statements: Box::new(self.block()?),
+            }));
         }
 
         self.expression_statement()
@@ -89,6 +95,18 @@ impl Parser {
         let expr: Expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Some(Stmt::Print { expression: expr }))
+    }
+
+    // block -> "{" declaration* "}" ;
+    fn block(&mut self) -> Result<Vec<Option<Stmt>>, ParseError> {
+        let mut statements: Vec<Option<Stmt>> = vec![];
+
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            statements.push(self.declaration());
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
+        Ok(statements)
     }
 
     // expression -> assignment ;

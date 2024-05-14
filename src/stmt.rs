@@ -1,8 +1,9 @@
 use crate::{expr::Expr, token::Token};
 
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Block {
-        statements: Vec<Box<Stmt>>,
+        statements: Box<Vec<Option<Stmt>>>,
     },
     Class {
         name: Token,
