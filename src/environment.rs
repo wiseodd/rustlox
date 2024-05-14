@@ -30,4 +30,17 @@ impl Environment {
             }),
         }
     }
+
+    pub fn assign(&mut self, var_name: &Token, value: Literal) -> Result<(), RuntimeError> {
+        match self.values.contains_key(&var_name.lexeme) {
+            true => {
+                self.values.insert(var_name.lexeme.to_owned(), value);
+                Ok(())
+            }
+            false => Err(RuntimeError {
+                message: format!("Undefined variable '{}'", var_name.lexeme),
+                token: Some(var_name.to_owned()),
+            }),
+        }
+    }
 }

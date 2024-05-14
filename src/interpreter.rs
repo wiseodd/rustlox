@@ -52,10 +52,15 @@ impl Interpreter {
         }
     }
 
-    fn evaluate(&self, expr: &Expr) -> Result<Literal, RuntimeError> {
+    fn evaluate(&mut self, expr: &Expr) -> Result<Literal, RuntimeError> {
         match expr {
             Expr::Literal { value } => Ok(value.clone()),
             Expr::Grouping { expression } => self.evaluate(expression),
+            Expr::Assign { name, value } => {
+                let value: Literal = self.evaluate(value)?;
+                self.environment.assign(name, value.clone())?;
+                Ok(value)
+            }
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)
                 let right: Literal = self.evaluate(right)?;
@@ -212,6 +217,6 @@ fn stringify(lit: Literal) -> String {
             }
         }
         Literal::Boolean(val) => val.to_string(),
-        Literal::String(val) => val,
+        Literal::String(val) => format!("\"{val}\""),
     }
 }

@@ -91,9 +91,30 @@ impl Parser {
         Ok(Some(Stmt::Print { expression: expr }))
     }
 
-    // expression -> equality ;
+    // expression -> assignment ;
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.equality()
+        self.assignment()
+    }
+
+    // assignment -> IDENTIFIER "=" assignment | equality ;
+    fn assignment(&mut self) -> Result<Expr, ParseError> {
+        let expr: Expr = self.equality()?;
+
+        if self.is_match_advance(&[TokenType::Equal]) {
+            let equals: Token = self.previous().to_owned();
+            let value: Expr = self.assignment()?;
+
+            if let Expr::Variable { name } = expr {
+                return Ok(Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                });
+            };
+
+            return Err(Self::error(&equals, "Invalid assignment target."));
+        }
+
+        Ok(expr)
     }
 
     // comparison ( ( "!=" | "==" ) comparison )* ;
