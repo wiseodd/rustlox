@@ -91,6 +91,28 @@ impl Interpreter {
                 self.environment.assign(name, value.clone())?;
                 Ok(value)
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left_lit: Literal = self.evaluate(left)?;
+
+                match operator.token_type {
+                    TokenType::Or => {
+                        if is_truthy(left_lit.clone()) {
+                            return Ok(left_lit);
+                        }
+                    }
+                    _ => {
+                        if !is_truthy(left_lit.clone()) {
+                            return Ok(left_lit);
+                        }
+                    }
+                }
+
+                self.evaluate(right)
+            }
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)
                 let right: Literal = self.evaluate(right)?;
