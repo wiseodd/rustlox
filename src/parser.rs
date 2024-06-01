@@ -68,7 +68,7 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
-    // statement -> exprStmt | ifStmt | printStmt | block ;
+    // statement -> exprStmt | ifStmt | printStmt | whileStmt | block ;
     fn statement(&mut self) -> Result<Option<Stmt>, ParseError> {
         if self.is_match_advance(&[TokenType::If]) {
             return self.if_statement();
@@ -76,6 +76,10 @@ impl Parser {
 
         if self.is_match_advance(&[TokenType::Print]) {
             return self.print_statement();
+        }
+
+        if self.is_match_advance(&[TokenType::While]) {
+            return self.while_statement();
         }
 
         if self.is_match_advance(&[TokenType::LeftBrace]) {
@@ -119,6 +123,16 @@ impl Parser {
         let expr: Expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Some(Stmt::Print { expression: expr }))
+    }
+
+    // whileStmt -> "while" "(" expression ")" statement ;
+    fn while_statement(&mut self) -> Result<Option<Stmt>, ParseError> {
+        let _ = self.consume(TokenType::LeftParen, "Expect '(' after 'while'.");
+        let condition: Expr = self.expression()?;
+        let _ = self.consume(TokenType::RightParen, "Expect ')' after condition.");
+        let body: Box<Stmt> = Box::new(self.statement()?.unwrap());
+
+        Ok(Some(Stmt::While { condition, body }))
     }
 
     // block -> "{" declaration* "}" ;

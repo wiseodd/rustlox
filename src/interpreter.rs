@@ -52,6 +52,16 @@ impl Interpreter {
                     };
                 }
             }
+            Stmt::While { condition, body } => {
+                let literal: Literal = match self.evaluate(condition) {
+                    Ok(literal) => literal,
+                    Err(error) => return Lox::runtime_error(error.token, &error.message),
+                };
+
+                while is_truthy(literal.clone()) {
+                    self.execute(body);
+                }
+            }
             Stmt::Print { expression: expr } => match self.evaluate(expr) {
                 Ok(lit) => println!("{}", stringify(lit)),
                 Err(error) => Lox::runtime_error(error.token, &error.message),
