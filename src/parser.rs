@@ -68,8 +68,12 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
-    // statement -> exprStmt | printStmt | block ;
+    // statement -> exprStmt | ifStmt | printStmt | block ;
     fn statement(&mut self) -> Result<Option<Stmt>, ParseError> {
+        if self.is_match_advance(&[TokenType::If]) {
+            return self.if_statement();
+        }
+
         if self.is_match_advance(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -88,6 +92,26 @@ impl Parser {
         let expr: Expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Some(Stmt::Expression { expression: expr }))
+    }
+
+    // ifStmt -> "if" "(" expression ")" statement
+    //           ( "else" statement )? ;
+    fn if_statement(&mut self) -> Result<Option<Stmt>, ParseError> {
+        let _ = self.consume(TokenType::LeftParen, "Expect '(' after 'if' .");
+        let condition: Expr = self.expression()?;
+        let _ = self.consume(TokenType::RightParen, "Expect ')' after if condition.");
+
+        let then_branch: Stmt = self.statement()?.unwrap();
+        let else_branch: Option<Stmt> = match self.is_match_advance(&[TokenType::Else]) {
+            true => self.statement()?,
+            false => None,
+        };
+
+        Ok(Some(Stmt::If {
+            condition,
+            then_branch: Box::new(then_branch),
+            else_branch: Box::new(else_branch),
+        }))
     }
 
     // printStmt -> "print" expression ";" ;

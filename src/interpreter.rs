@@ -33,6 +33,25 @@ impl Interpreter {
                 Ok(_) => (),
                 Err(error) => Lox::runtime_error(error.token, &error.message),
             },
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let _cond: Literal = match self.evaluate(condition) {
+                    Ok(literal) => literal,
+                    Err(error) => return Lox::runtime_error(error.token, &error.message),
+                };
+
+                if is_truthy(_cond) {
+                    self.execute(then_branch);
+                } else {
+                    match &**else_branch {
+                        Some(else_stmt) => self.execute(else_stmt),
+                        _ => (), // do nothing
+                    };
+                }
+            }
             Stmt::Print { expression: expr } => match self.evaluate(expr) {
                 Ok(lit) => println!("{}", stringify(lit)),
                 Err(error) => Lox::runtime_error(error.token, &error.message),
@@ -199,6 +218,14 @@ impl Interpreter {
                 token: None,
             }),
         }
+    }
+}
+
+fn is_truthy(a: Literal) -> bool {
+    match a {
+        Literal::None => false,
+        Literal::Boolean(val) => val,
+        _ => true,
     }
 }
 

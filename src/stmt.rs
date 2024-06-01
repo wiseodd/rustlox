@@ -21,7 +21,7 @@ pub enum Stmt {
     If {
         condition: Expr,
         then_branch: Box<Stmt>,
-        else_branch: Box<Stmt>,
+        else_branch: Box<Option<Stmt>>,
     },
     Print {
         expression: Expr,
