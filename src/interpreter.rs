@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     callable::LoxCallable,
@@ -10,15 +11,20 @@ use crate::{
     token::{Literal, TokenType},
 };
 
+type RcRC<T> = Rc<RefCell<T>>;
+
 #[derive(Default)]
 pub struct Interpreter {
-    environment: Environment,
+    globals: RcRC<Environment>,
+    environment: RcRC<Environment>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let env = Rc::new(RefCell::new(Environment::new(None)));
         Interpreter {
-            environment: Environment::new(None),
+            globals: env.clone(),
+            environment: env.clone(),
         }
     }
 
@@ -75,16 +81,20 @@ impl Interpreter {
                     None => Literal::None,
                 };
 
-                self.environment.define(name.lexeme.to_owned(), value);
+                let mut env = RefCell::borrow_mut(&self.environment);
+                env.define(name.lexeme.to_owned(), value);
             }
             Stmt::Block { statements } => {
-                self.environment = Environment::new(Some(self.environment.clone()));
+                let previous = self.environment.clone();
+                self.environment = Rc::new(RefCell::new(Environment::new(Some(
+                    self.environment.clone(),
+                ))));
 
                 for stmt in statements.to_owned().iter().flatten() {
                     self.execute(stmt);
                 }
 
-                self.environment = *((&self.environment.enclosing).clone().unwrap());
+                self.environment = previous;
             }
             _ => unreachable!(),
         }
@@ -97,7 +107,7 @@ impl Interpreter {
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Assign { name, value } => {
                 let val: Literal = self.evaluate(value)?;
-                self.environment.assign(name, val.clone())?;
+                self.environment.borrow_mut().assign(name, val.clone())?;
                 Ok(val)
             }
             Expr::Logical {
@@ -181,7 +191,7 @@ impl Interpreter {
                     }),
                 }
             }
-            Expr::Variable { name } => self.environment.get(name),
+            Expr::Variable { name } => self.environment.borrow_mut().get(name),
             Expr::Binary {
                 left,
                 operator,

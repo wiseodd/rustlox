@@ -1,20 +1,24 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::{
     error::RuntimeError,
     token::{Literal, Token},
 };
 
-#[derive(Default, Clone, Debug)]
+type Pointer<T> = Option<Rc<RefCell<T>>>;
+
+#[derive(Debug, Default, Clone)]
 pub struct Environment {
-    pub enclosing: Option<Box<Environment>>,
+    enclosing: Pointer<Environment>,
     values: HashMap<String, Literal>,
 }
 
 impl Environment {
-    pub fn new(enclosing: Option<Environment>) -> Self {
+    pub fn new(enclosing: Pointer<Environment>) -> Self {
         Environment {
-            enclosing: enclosing.map(Box::new),
+            enclosing,
             values: HashMap::new(),
         }
     }
@@ -27,8 +31,8 @@ impl Environment {
         match self.values.get(&var_name.lexeme) {
             Some(val) => Ok(val.to_owned()),
             None => {
-                if let Some(env) = self.enclosing.to_owned() {
-                    return env.get(var_name);
+                if let Some(env) = &self.enclosing {
+                    return env.borrow_mut().get(var_name);
                 }
 
                 Err(RuntimeError {
@@ -46,8 +50,8 @@ impl Environment {
                 Ok(())
             }
             false => {
-                if !self.enclosing.is_none() {
-                    let _ = self.enclosing.as_mut().unwrap().assign(var_name, value)?;
+                if let Some(env) = &self.enclosing {
+                    let _ = env.borrow_mut().assign(var_name, value)?;
                     return Ok(());
                 }
 
