@@ -1,0 +1,39 @@
+var i = 0;
+
+while (i < 5) {
+  print i;
+  i = i + 1;
+}
+
+print "--------";
+
+{
+  var i = 8;
+
+  for (var i = 0; i < 10; i = i + 1) {
+    print i;
+  }
+
+  print "--------";
+
+  for (; i < 10; i = i + 1) {
+    print i;
+  }
+
+  {
+    print "--------";
+
+    var i = 10;
+
+    while (i > 7) {
+      print i;
+      i = i - 1;
+    }
+  }
+}
+
+print "--------";
+
+for (; i < 10; i = i + 1) {
+  print i;
+}

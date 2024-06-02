@@ -283,6 +283,6 @@ fn stringify(lit: Literal) -> String {
             }
         }
         Literal::Boolean(val) => val.to_string(),
-        Literal::String(val) => format!("\"{val}\""),
+        Literal::String(val) => format!("{val}"),
     }
 }
