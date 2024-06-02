@@ -353,7 +353,7 @@ impl Parser {
         Ok(expr)
     }
 
-    // ( ( "!" | "-" ) unary ) | primary ;
+    //  ( "!" | "-" ) unary | call ;
     fn unary(&mut self) -> Result<Expr, ParseError> {
         if self.is_match_advance(&[TokenType::Bang, TokenType::Minus]) {
             let operator: Token = self.previous().clone();
@@ -365,7 +365,49 @@ impl Parser {
             });
         }
 
-        self.primary()
+        self.call()
+    }
+
+    // call -> primary ( "(" arguments? ")" )* ;
+    fn call(&mut self) -> Result<Expr, ParseError> {
+        let mut expr: Expr = self.primary()?;
+
+        loop {
+            if self.is_match_advance(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    // arguments -> expression ( "," expression )* ;
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, ParseError> {
+        let mut arguments: Vec<Box<Expr>> = vec![];
+
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    Self::error(self.peek(), "Can't have more than 255 arguments.");
+                }
+
+                arguments.push(Box::new(self.expression()?));
+
+                if !self.is_match_advance(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren: Token = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+
+        Ok(Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            arguments,
+        })
     }
 
     // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;

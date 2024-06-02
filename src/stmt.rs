@@ -3,6 +3,7 @@ use crate::{expr::Expr, token::Token};
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Block {
+        // TODO: Convert to Vec<Option<Box<Stmt>>>
         statements: Box<Vec<Option<Stmt>>>,
     },
     Class {
@@ -21,6 +22,7 @@ pub enum Stmt {
     If {
         condition: Expr,
         then_branch: Box<Stmt>,
+        // TODO: Convert to Option<Box<Stmt>>
         else_branch: Box<Option<Stmt>>,
     },
     Print {
