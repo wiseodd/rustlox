@@ -12,6 +12,7 @@ fn visit_expr(expr: &Expr) -> String {
             Literal::String(val) => val.to_string(),
             Literal::Boolean(val) => val.to_string(),
             Literal::Number(val) => val.to_string(),
+            Literal::Callable(val) => val.to_string(),
         },
         // Recursion
         Expr::Binary {

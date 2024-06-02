@@ -1,6 +1,7 @@
 use anyhow::Result;
 
 use crate::{
+    callable::LoxCallable,
     environment::Environment,
     error::RuntimeError,
     expr::Expr,
@@ -27,6 +28,7 @@ impl Interpreter {
         }
     }
 
+    // TODO: Modularize
     fn execute(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Expression { expression: expr } => match self.evaluate(expr) {
@@ -88,6 +90,7 @@ impl Interpreter {
         }
     }
 
+    // TODO: Modularize
     fn evaluate(&mut self, expr: &Expr) -> Result<Literal, RuntimeError> {
         match expr {
             Expr::Literal { value } => Ok(value.clone()),
@@ -118,6 +121,39 @@ impl Interpreter {
                 }
 
                 self.evaluate(right)
+            }
+            Expr::Call {
+                callee,
+                paren,
+                arguments,
+            } => {
+                let mut arguments_vals: Vec<Literal> = vec![];
+                for arg in arguments.iter() {
+                    arguments_vals.push(self.evaluate(arg)?);
+                }
+
+                let function: &dyn LoxCallable = match self.evaluate(callee)? {
+                    Literal::Callable(name) => todo!(),
+                    _ => {
+                        return Err(RuntimeError {
+                            message: "Callee of a function must be a LoxCallable".to_string(),
+                            token: Some(paren.clone()),
+                        })
+                    }
+                };
+
+                if arguments_vals.len() != function.arity() {
+                    return Err(RuntimeError {
+                        message: format!(
+                            "Expected {} arguments but got {}.",
+                            function.arity(),
+                            arguments.len()
+                        ),
+                        token: Some(paren.clone()),
+                    });
+                }
+
+                return Ok(function.call(&self, arguments_vals));
             }
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)
@@ -284,5 +320,6 @@ fn stringify(lit: Literal) -> String {
         }
         Literal::Boolean(val) => val.to_string(),
         Literal::String(val) => format!("{val}"),
+        Literal::Callable(name) => format!("Callable with name {name}"),
     }
 }
