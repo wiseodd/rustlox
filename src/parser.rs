@@ -68,8 +68,12 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
-    // statement -> exprStmt | ifStmt | printStmt | whileStmt | block ;
+    // statement -> exprStmt | forStmt | ifStmt | printStmt | whileStmt | block ;
     fn statement(&mut self) -> Result<Option<Stmt>, ParseError> {
+        if self.is_match_advance(&[TokenType::For]) {
+            return self.for_statement();
+        }
+
         if self.is_match_advance(&[TokenType::If]) {
             return self.if_statement();
         }
@@ -96,6 +100,70 @@ impl Parser {
         let expr: Expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Some(Stmt::Expression { expression: expr }))
+    }
+
+    // forStmt -> "for" "(" ( varDecl | exprStmt | ";" )
+    //            expression? ";"
+    //            expression? ")" statement ";"
+    fn for_statement(&mut self) -> Result<Option<Stmt>, ParseError> {
+        let _ = self.consume(TokenType::LeftParen, "Expect '(' after 'for'.");
+
+        let initializer: Option<Stmt>;
+        if self.is_match_advance(&[TokenType::Semicolon]) {
+            initializer = None;
+        } else if self.is_match_advance(&[TokenType::Var]) {
+            initializer = Some(self.var_declaration()?);
+        } else {
+            initializer = self.expression_statement()?;
+        }
+
+        let mut condition: Option<Expr>;
+        if !self.check(&TokenType::Semicolon) {
+            condition = Some(self.expression()?);
+        } else {
+            condition = None;
+        }
+        let _ = self.consume(TokenType::Semicolon, "Expect ';' after loop condition")?;
+
+        let increment: Option<Expr>;
+        if !self.check(&TokenType::RightParen) {
+            increment = Some(self.expression()?);
+        } else {
+            increment = None;
+        }
+        let _ = self.consume(TokenType::RightParen, "Expect ')' after for clauses.");
+
+        let mut body: Option<Stmt> = self.statement()?;
+        if !increment.is_none() {
+            body = Some(Stmt::Block {
+                statements: Box::new(vec![
+                    body,
+                    Some(Stmt::Expression {
+                        expression: increment.unwrap(),
+                    }),
+                ]),
+            });
+        }
+
+        // If the condition is not specified, set it to `true`
+        // i.e. infinite loop
+        if condition.is_none() {
+            condition = Some(Expr::Literal {
+                value: Literal::Boolean(true),
+            });
+        }
+        body = Some(Stmt::While {
+            condition: condition.unwrap(),
+            body: Box::new(body.unwrap()),
+        });
+
+        if !initializer.is_none() {
+            body = Some(Stmt::Block {
+                statements: Box::new(vec![initializer, body]),
+            });
+        }
+
+        Ok(body)
     }
 
     // ifStmt -> "if" "(" expression ")" statement

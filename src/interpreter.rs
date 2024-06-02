@@ -53,12 +53,10 @@ impl Interpreter {
                 }
             }
             Stmt::While { condition, body } => {
-                let literal: Literal = match self.evaluate(condition) {
+                while is_truthy(match self.evaluate(condition) {
                     Ok(literal) => literal,
                     Err(error) => return Lox::runtime_error(error.token, &error.message),
-                };
-
-                while is_truthy(literal.clone()) {
+                }) {
                     self.execute(body);
                 }
             }
@@ -78,15 +76,13 @@ impl Interpreter {
                 self.environment.define(name.lexeme.to_owned(), value);
             }
             Stmt::Block { statements } => {
-                let env: Environment = Environment::new(Some(self.environment.clone()));
-                let previous: Environment = self.environment.clone();
-                self.environment = env;
+                self.environment = Environment::new(Some(self.environment.clone()));
 
                 for stmt in statements.to_owned().iter().flatten() {
                     self.execute(stmt);
                 }
 
-                self.environment = previous;
+                self.environment = *((&self.environment.enclosing).clone().unwrap());
             }
             _ => unreachable!(),
         }
@@ -97,9 +93,9 @@ impl Interpreter {
             Expr::Literal { value } => Ok(value.clone()),
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Assign { name, value } => {
-                let value: Literal = self.evaluate(value)?;
-                self.environment.assign(name, value.clone())?;
-                Ok(value)
+                let val: Literal = self.evaluate(value)?;
+                self.environment.assign(name, val.clone())?;
+                Ok(val)
             }
             Expr::Logical {
                 left,

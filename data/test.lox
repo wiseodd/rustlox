@@ -1,24 +1,13 @@
-var a = "global a";
-var b = "global b";
-var c = "global c";
+var i = 0;
 
-{
-  var a = "outer a";
-  var b = "outer b";
-
-  {
-    var a = "inner a";
-    print a;
-    print b;
-    print c;
-  }
-
-  print a;
-  print b;
-  print c;
+while (i < 5) {
+  print i;
+  i = i + 1;
 }
 
-print a;
-print b;
-print c;
+print "--------";
+
+for (; i < 10; i = i + 1) {
+  print i;
+}
 

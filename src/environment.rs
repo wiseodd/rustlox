@@ -5,9 +5,9 @@ use crate::{
     token::{Literal, Token},
 };
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+    pub enclosing: Option<Box<Environment>>,
     values: HashMap<String, Literal>,
 }
 
@@ -46,8 +46,9 @@ impl Environment {
                 Ok(())
             }
             false => {
-                if let Some(mut env) = self.enclosing.to_owned() {
-                    return env.assign(var_name, value);
+                if !self.enclosing.is_none() {
+                    let _ = self.enclosing.as_mut().unwrap().assign(var_name, value)?;
+                    return Ok(());
                 }
 
                 Err(RuntimeError {
