@@ -11,12 +11,12 @@ use crate::{
     token::{Literal, TokenType},
 };
 
-type RcRC<T> = Rc<RefCell<T>>;
+type Pointer<T> = Rc<RefCell<T>>;
 
 #[derive(Default)]
 pub struct Interpreter {
-    globals: RcRC<Environment>,
-    environment: RcRC<Environment>,
+    globals: Pointer<Environment>,
+    environment: Pointer<Environment>,
 }
 
 impl Interpreter {
