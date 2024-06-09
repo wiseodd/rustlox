@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::callable::LoxCallable;
+
 #[derive(strum_macros::Display, PartialEq, Clone, Debug)]
 pub enum TokenType {
     // Single-character tokens
@@ -53,7 +55,6 @@ pub enum Literal {
     String(String),
     Number(f64),
     Boolean(bool),
-    Callable(String),
     None,
 }
 

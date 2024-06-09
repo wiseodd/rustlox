@@ -2,17 +2,14 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::{
-    error::RuntimeError,
-    token::{Literal, Token},
-};
+use crate::{error::RuntimeError, object::Object, token::Token};
 
 type OptPointer<T> = Option<Rc<RefCell<T>>>;
 
 #[derive(Debug, Default, Clone)]
 pub struct Environment {
     enclosing: OptPointer<Environment>,
-    values: HashMap<String, Literal>,
+    values: HashMap<String, Object>,
 }
 
 impl Environment {
@@ -23,11 +20,11 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, name: String, value: Literal) {
+    pub fn define(&mut self, name: String, value: Object) {
         self.values.insert(name, value);
     }
 
-    pub fn get(&self, var_name: &Token) -> Result<Literal, RuntimeError> {
+    pub fn get(&self, var_name: &Token) -> Result<Object, RuntimeError> {
         match self.values.get(&var_name.lexeme) {
             Some(val) => Ok(val.to_owned()),
             None => {
@@ -43,7 +40,7 @@ impl Environment {
         }
     }
 
-    pub fn assign(&mut self, var_name: &Token, value: Literal) -> Result<(), RuntimeError> {
+    pub fn assign(&mut self, var_name: &Token, value: Object) -> Result<(), RuntimeError> {
         match self.values.contains_key(&var_name.lexeme) {
             true => {
                 self.values.insert(var_name.lexeme.to_owned(), value);
