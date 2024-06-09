@@ -1,8 +1,5 @@
 use crate::{
-    environment::Environment,
-    interpreter::Interpreter,
-    stmt::Stmt,
-    token::{Literal, Token},
+    environment::Environment, interpreter::Interpreter, object::Object, stmt::Stmt, token::Token,
 };
 use core::fmt;
 use std::{cell::RefCell, rc::Rc};
@@ -11,7 +8,7 @@ use std::{cell::RefCell, rc::Rc};
 pub enum LoxCallable {
     Native {
         arity: usize,
-        body: Box<fn(&Vec<Literal>) -> Literal>,
+        body: Box<fn(&Vec<Object>) -> Object>,
     },
     User {
         name: Token,
@@ -30,9 +27,9 @@ impl LoxCallable {
         }
     }
 
-    pub fn call(&self, interpreter: &Interpreter, arguments: Vec<Literal>) -> Literal {
+    pub fn call(&self, interpreter: &Interpreter, arguments: &Vec<Object>) -> Object {
         match self {
-            LoxCallable::Native { body, .. } => body(&arguments),
+            LoxCallable::Native { body, .. } => body(arguments),
             LoxCallable::User {
                 name,
                 params,

@@ -1,6 +1,11 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{
+    callable::LoxCallable,
     environment::Environment,
     error::RuntimeError,
     expr::Expr,
@@ -20,17 +25,24 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        let env = Rc::new(RefCell::new(Environment::new(None)));
+        let globals = Rc::new(RefCell::new(Environment::new(None)));
 
-        //let mut env_mut = RefCell::borrow_mut(&env);
-        //env_mut.define(
-        //    "clock".to_string(),
-        //    Literal::Callable(LoxCallable::Clock(LoxClock {})),
-        //);
+        let clock: Object = Object::Callable(LoxCallable::Native {
+            arity: 0,
+            body: Box::new(|_arguments: &Vec<Object>| {
+                Object::Number(
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs_f64(),
+                )
+            }),
+        });
+        globals.borrow_mut().define("clock".to_string(), clock);
 
         Interpreter {
-            globals: env.clone(),
-            environment: env.clone(),
+            globals: globals.clone(),
+            environment: globals.clone(),
         }
     }
 
@@ -143,39 +155,39 @@ impl Interpreter {
 
                 self.evaluate(right)
             }
-            //Expr::Call {
-            //    callee,
-            //    paren,
-            //    arguments,
-            //} => {
-            //    let mut arguments_vals: Vec<Object> = vec![];
-            //    for arg in arguments.iter() {
-            //        arguments_vals.push(self.evaluate(arg)?);
-            //    }
-            //
-            //    let function: &dyn LoxCallable = match self.evaluate(callee)? {
-            //        Object::Callable(name) => todo!(),
-            //        _ => {
-            //            return Err(RuntimeError {
-            //                message: "Callee of a function must be a LoxCallable".to_string(),
-            //                token: Some(paren.clone()),
-            //            })
-            //        }
-            //    };
-            //
-            //    if arguments_vals.len() != function.arity() {
-            //        return Err(RuntimeError {
-            //            message: format!(
-            //                "Expected {} arguments but got {}.",
-            //                function.arity(),
-            //                arguments.len()
-            //            ),
-            //            token: Some(paren.clone()),
-            //        });
-            //    }
-            //
-            //    return Ok(function.call(&self, arguments_vals));
-            //}
+            Expr::Call {
+                callee,
+                paren,
+                arguments,
+            } => {
+                let mut arguments_vals: Vec<Object> = vec![];
+                for arg in arguments.iter() {
+                    arguments_vals.push(self.evaluate(arg)?);
+                }
+
+                let function: LoxCallable = match self.evaluate(callee)? {
+                    Object::Callable(func) => func,
+                    _ => {
+                        return Err(RuntimeError {
+                            message: "Callee of a function must be a LoxCallable".to_string(),
+                            token: Some(paren.clone()),
+                        })
+                    }
+                };
+
+                if arguments_vals.len() != function.arity() {
+                    return Err(RuntimeError {
+                        message: format!(
+                            "Expected {} arguments but got {}.",
+                            function.arity(),
+                            arguments.len()
+                        ),
+                        token: Some(paren.clone()),
+                    });
+                }
+
+                return Ok(function.call(&self, &arguments_vals));
+            }
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)
                 let right: Object = self.evaluate(right)?;
