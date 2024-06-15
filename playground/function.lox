@@ -1,0 +1,16 @@
+fn sayHi(first, last) {
+  print "Hi, " + first + " " + last + "!";
+}
+
+print sayHi;
+sayHi("Dear", "Reader");
+
+print "";
+
+fn count(n) {
+  if (n > 1) count(n - 1);
+  print n;
+}
+
+print count;
+count(3);

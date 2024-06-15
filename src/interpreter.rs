@@ -1,4 +1,3 @@
-use core::panic;
 use std::{
     cell::RefCell,
     rc::Rc,
@@ -61,29 +60,23 @@ impl Interpreter {
         }
     }
 
-    pub fn execute_block(&mut self, stmt: &Stmt, environment: Rc<RefCell<Environment>>) {
-        match stmt {
-            Stmt::Block { statements } => {
-                let previous = self.environment.clone();
-                self.environment = environment.clone();
-
-                for stmt in statements.to_owned().iter().flatten() {
-                    self.execute(stmt, Some(environment.clone()));
-                }
-
-                self.environment = previous;
-            }
-            _ => unreachable!(),
-        }
-    }
-
     // TODO: Modularize
-    fn execute(&mut self, stmt: &Stmt, environment: Option<Rc<RefCell<Environment>>>) {
+    pub fn execute(&mut self, stmt: &Stmt, environment: Option<Rc<RefCell<Environment>>>) {
         match stmt {
             Stmt::Expression { expression: expr } => match self.evaluate(expr) {
                 Ok(_) => (),
                 Err(error) => Lox::runtime_error(error.token, &error.message),
             },
+            Stmt::Function { name, params, body } => {
+                let function: LoxCallable = LoxCallable::User {
+                    name: name.clone(),
+                    params: params.clone(),
+                    body: body.to_vec(),
+                };
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.clone(), Object::Callable(function));
+            }
             Stmt::If {
                 condition,
                 then_branch,

@@ -60,11 +60,6 @@ impl Parser {
         }
     }
 
-    // fnDecl -> "fn" function ;
-    fn fn_declaration(&mut self) -> Result<Stmt, ParseError> {
-        todo!();
-    }
-
     // function -> IDENTIFIER "(" parameters? ")" block ;
     fn function(&mut self, kind: String) -> Result<Stmt, ParseError> {
         let name: Token = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind))?;
@@ -108,11 +103,6 @@ impl Parser {
         };
 
         Ok(Stmt::Function { name, params, body })
-    }
-
-    // parameters -> IDENTIFIER ( "," IDENTIFIER )* ;
-    fn parameters(&mut self) -> Result<Stmt, ParseError> {
-        todo!();
     }
 
     // varDecl -> "var" IDENTIFIER ( "=" expression )? ";" ;
