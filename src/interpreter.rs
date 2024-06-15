@@ -1,3 +1,4 @@
+use core::panic;
 use std::{
     cell::RefCell,
     rc::Rc,
@@ -19,7 +20,7 @@ type Pointer<T> = Rc<RefCell<T>>;
 
 #[derive(Default)]
 pub struct Interpreter {
-    globals: Pointer<Environment>,
+    pub globals: Pointer<Environment>,
     environment: Pointer<Environment>,
 }
 
@@ -48,12 +49,36 @@ impl Interpreter {
 
     pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) {
         for stmt in statements.into_iter().flatten() {
-            self.execute(&stmt);
+            match stmt {
+                Stmt::Block { .. } => self.execute(
+                    &stmt,
+                    Some(Rc::new(RefCell::new(Environment::new(Some(
+                        self.environment.clone(),
+                    ))))),
+                ),
+                _ => self.execute(&stmt, None),
+            };
+        }
+    }
+
+    pub fn execute_block(&mut self, stmt: &Stmt, environment: Rc<RefCell<Environment>>) {
+        match stmt {
+            Stmt::Block { statements } => {
+                let previous = self.environment.clone();
+                self.environment = environment.clone();
+
+                for stmt in statements.to_owned().iter().flatten() {
+                    self.execute(stmt, Some(environment.clone()));
+                }
+
+                self.environment = previous;
+            }
+            _ => unreachable!(),
         }
     }
 
     // TODO: Modularize
-    fn execute(&mut self, stmt: &Stmt) {
+    fn execute(&mut self, stmt: &Stmt, environment: Option<Rc<RefCell<Environment>>>) {
         match stmt {
             Stmt::Expression { expression: expr } => match self.evaluate(expr) {
                 Ok(_) => (),
@@ -70,10 +95,10 @@ impl Interpreter {
                 };
 
                 if is_truthy(_cond) {
-                    self.execute(then_branch);
+                    self.execute(then_branch, environment);
                 } else {
                     match &**else_branch {
-                        Some(else_stmt) => self.execute(else_stmt),
+                        Some(else_stmt) => self.execute(else_stmt, environment),
                         _ => (), // do nothing
                     };
                 }
@@ -83,7 +108,7 @@ impl Interpreter {
                     Ok(literal) => literal,
                     Err(error) => return Lox::runtime_error(error.token, &error.message),
                 }) {
-                    self.execute(body);
+                    self.execute(body, environment.clone());
                 }
             }
             Stmt::Print { expression: expr } => match self.evaluate(expr) {
@@ -104,12 +129,15 @@ impl Interpreter {
             }
             Stmt::Block { statements } => {
                 let previous = self.environment.clone();
-                self.environment = Rc::new(RefCell::new(Environment::new(Some(
-                    self.environment.clone(),
-                ))));
+                self.environment = match environment {
+                    Some(ref env) => env.clone(),
+                    None => Rc::new(RefCell::new(Environment::new(Some(
+                        self.environment.clone(),
+                    )))),
+                };
 
                 for stmt in statements.to_owned().iter().flatten() {
-                    self.execute(stmt);
+                    self.execute(stmt, environment.clone());
                 }
 
                 self.environment = previous;
@@ -186,7 +214,7 @@ impl Interpreter {
                     });
                 }
 
-                return Ok(function.call(&self, &arguments_vals));
+                return Ok(function.call(self, &arguments_vals));
             }
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)

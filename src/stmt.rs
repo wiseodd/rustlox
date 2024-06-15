@@ -4,7 +4,7 @@ use crate::{expr::Expr, token::Token};
 pub enum Stmt {
     Block {
         // TODO: Convert to Vec<Option<Box<Stmt>>>
-        statements: Box<Vec<Option<Stmt>>>,
+        statements: Vec<Option<Box<Stmt>>>,
     },
     Class {
         name: Token,
@@ -17,7 +17,7 @@ pub enum Stmt {
     Function {
         name: Token,
         params: Vec<Token>,
-        body: Vec<Box<Stmt>>,
+        body: Vec<Option<Box<Stmt>>>,
     },
     If {
         condition: Expr,

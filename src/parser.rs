@@ -29,8 +29,18 @@ impl Parser {
         statements
     }
 
-    // declaration -> varDecl | statement ;
+    // declaration -> fnDecl | varDecl | statement ;
     fn declaration(&mut self) -> Option<Stmt> {
+        if self.is_match_advance(&[TokenType::Fn]) {
+            return match self.function("function".to_string()) {
+                Ok(stmt) => Some(stmt),
+                Err(_) => {
+                    self.synchronize();
+                    None
+                }
+            };
+        }
+
         if self.is_match_advance(&[TokenType::Var]) {
             return match self.var_declaration() {
                 Ok(stmt) => Some(stmt),
@@ -48,6 +58,61 @@ impl Parser {
                 None
             }
         }
+    }
+
+    // fnDecl -> "fn" function ;
+    fn fn_declaration(&mut self) -> Result<Stmt, ParseError> {
+        todo!();
+    }
+
+    // function -> IDENTIFIER "(" parameters? ")" block ;
+    fn function(&mut self, kind: String) -> Result<Stmt, ParseError> {
+        let name: Token = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind))?;
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '(' after {} name.", kind),
+        )?;
+
+        let mut params: Vec<Token> = vec![];
+
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    Self::error(self.peek(), "Can't have more than 255 parameters.");
+                }
+
+                params.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
+
+                if !self.is_match_advance(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let _ = self.consume(TokenType::RightParen, "Expect ')' after parameters.");
+        let _ = self.consume(
+            TokenType::LeftBrace,
+            &format!("Expect '{{' before {} body.", kind),
+        );
+        let body: Vec<Option<Box<Stmt>>> = match self.block() {
+            Ok(vec) => {
+                // Vec<Option<Stmt>> -> Vec<Option<Block<Stmt>>>
+                vec.iter()
+                    .map(|x| match x {
+                        Some(val) => Some(Box::new(val.clone())),
+                        None => None,
+                    })
+                    .collect()
+            }
+            Err(err) => return Err(err),
+        };
+
+        Ok(Stmt::Function { name, params, body })
+    }
+
+    // parameters -> IDENTIFIER ( "," IDENTIFIER )* ;
+    fn parameters(&mut self) -> Result<Stmt, ParseError> {
+        todo!();
     }
 
     // varDecl -> "var" IDENTIFIER ( "=" expression )? ";" ;
@@ -88,7 +153,18 @@ impl Parser {
 
         if self.is_match_advance(&[TokenType::LeftBrace]) {
             return Ok(Some(Stmt::Block {
-                statements: Box::new(self.block()?),
+                statements: match self.block() {
+                    Ok(vec) => {
+                        // Vec<Option<Stmt>> -> Vec<Option<Box<Stmt>>>
+                        vec.iter()
+                            .map(|x| match x {
+                                Some(stmt) => Some(Box::new(stmt.clone())),
+                                None => None,
+                            })
+                            .collect()
+                    }
+                    Err(err) => return Err(err),
+                },
             }));
         }
 
@@ -136,12 +212,12 @@ impl Parser {
         let mut body: Option<Stmt> = self.statement()?;
         if !increment.is_none() {
             body = Some(Stmt::Block {
-                statements: Box::new(vec![
-                    body,
-                    Some(Stmt::Expression {
+                statements: vec![
+                    Some(Box::new(body.unwrap())),
+                    Some(Box::new(Stmt::Expression {
                         expression: increment.unwrap(),
-                    }),
-                ]),
+                    })),
+                ],
             });
         }
 
@@ -159,7 +235,10 @@ impl Parser {
 
         if !initializer.is_none() {
             body = Some(Stmt::Block {
-                statements: Box::new(vec![initializer, body]),
+                statements: vec![
+                    Some(Box::new(initializer.unwrap())),
+                    Some(Box::new(body.unwrap())),
+                ],
             });
         }
 

@@ -13,7 +13,7 @@ pub enum LoxCallable {
     User {
         name: Token,
         params: Vec<Token>,
-        body: Vec<Stmt>,
+        body: Vec<Option<Box<Stmt>>>,
         closure: Rc<RefCell<Environment>>,
         is_initializer: bool,
     },
@@ -27,16 +27,36 @@ impl LoxCallable {
         }
     }
 
-    pub fn call(&self, interpreter: &Interpreter, arguments: &Vec<Object>) -> Object {
+    pub fn call(&self, interpreter: &mut Interpreter, arguments: &Vec<Object>) -> Object {
         match self {
             LoxCallable::Native { body, .. } => body(arguments),
             LoxCallable::User {
-                name,
+                name: _,
                 params,
                 body,
-                closure,
-                is_initializer,
-            } => todo!(),
+                closure: _,
+                is_initializer: _,
+            } => {
+                let environment: Rc<RefCell<Environment>> = Rc::new(RefCell::new(
+                    Environment::new(Some(interpreter.globals.clone())),
+                ));
+
+                for i in 1..params.len() {
+                    environment.borrow_mut().define(
+                        params.get(i).unwrap().lexeme.clone(),
+                        arguments.get(i).unwrap().clone(),
+                    );
+                }
+
+                interpreter.execute_block(
+                    &Stmt::Block {
+                        statements: body.clone(),
+                    },
+                    environment,
+                );
+
+                Object::None
+            }
         }
     }
 }
