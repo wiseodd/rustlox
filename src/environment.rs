@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::{error::RuntimeError, object::Object, token::Token};
+use crate::{error::LoxError, object::Object, token::Token};
 
 type OptPointer<T> = Option<Rc<RefCell<T>>>;
 
@@ -24,7 +24,7 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    pub fn get(&self, var_name: &Token) -> Result<Object, RuntimeError> {
+    pub fn get(&self, var_name: &Token) -> Result<Object, LoxError> {
         match self.values.get(&var_name.lexeme) {
             Some(val) => Ok(val.to_owned()),
             None => {
@@ -32,7 +32,7 @@ impl Environment {
                     return env.borrow_mut().get(var_name);
                 }
 
-                Err(RuntimeError {
+                Err(LoxError::RuntimeError {
                     message: format!("Undefined variable '{}'.", var_name.lexeme),
                     token: Some(var_name.to_owned()),
                 })
@@ -40,7 +40,7 @@ impl Environment {
         }
     }
 
-    pub fn assign(&mut self, var_name: &Token, value: Object) -> Result<(), RuntimeError> {
+    pub fn assign(&mut self, var_name: &Token, value: Object) -> Result<(), LoxError> {
         match self.values.contains_key(&var_name.lexeme) {
             true => {
                 self.values.insert(var_name.lexeme.to_owned(), value);
@@ -52,7 +52,7 @@ impl Environment {
                     return Ok(());
                 }
 
-                Err(RuntimeError {
+                Err(LoxError::RuntimeError {
                     message: format!("Undefined variable '{}'", var_name.lexeme),
                     token: Some(var_name.to_owned()),
                 })

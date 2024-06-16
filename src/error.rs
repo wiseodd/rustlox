@@ -1,10 +1,13 @@
-use crate::token::Token;
+use crate::{object::Object, token::Token};
 
 #[derive(Debug)]
-pub struct ParseError {}
-
-#[derive(Debug)]
-pub struct RuntimeError {
-    pub message: String,
-    pub token: Option<Token>,
+pub enum LoxError {
+    ParseError,
+    RuntimeError {
+        message: String,
+        token: Option<Token>,
+    },
+    Return {
+        value: Object,
+    },
 }

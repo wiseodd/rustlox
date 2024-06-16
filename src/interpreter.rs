@@ -7,7 +7,7 @@ use std::{
 use crate::{
     callable::LoxCallable,
     environment::Environment,
-    error::RuntimeError,
+    error::LoxError,
     expr::Expr,
     lox::Lox,
     object::Object,
@@ -65,7 +65,7 @@ impl Interpreter {
         match stmt {
             Stmt::Expression { expression: expr } => match self.evaluate(expr) {
                 Ok(_) => (),
-                Err(error) => Lox::runtime_error(error.token, &error.message),
+                Err(error) => Lox::runtime_error(error),
             },
             Stmt::Function { name, params, body } => {
                 let function: LoxCallable = LoxCallable::User {
@@ -84,7 +84,7 @@ impl Interpreter {
             } => {
                 let _cond: Object = match self.evaluate(condition) {
                     Ok(literal) => literal,
-                    Err(error) => return Lox::runtime_error(error.token, &error.message),
+                    Err(error) => return Lox::runtime_error(error),
                 };
 
                 if is_truthy(_cond) {
@@ -99,14 +99,14 @@ impl Interpreter {
             Stmt::While { condition, body } => {
                 while is_truthy(match self.evaluate(condition) {
                     Ok(literal) => literal,
-                    Err(error) => return Lox::runtime_error(error.token, &error.message),
+                    Err(error) => return Lox::runtime_error(error),
                 }) {
                     self.execute(body, environment.clone());
                 }
             }
             Stmt::Print { expression: expr } => match self.evaluate(expr) {
                 Ok(lit) => println!("{}", stringify(lit)),
-                Err(error) => Lox::runtime_error(error.token, &error.message),
+                Err(error) => Lox::runtime_error(error),
             },
             Stmt::Var { name, initializer } => {
                 let value: Object = match initializer {
@@ -140,7 +140,7 @@ impl Interpreter {
     }
 
     // TODO: Modularize
-    fn evaluate(&mut self, expr: &Expr) -> Result<Object, RuntimeError> {
+    fn evaluate(&mut self, expr: &Expr) -> Result<Object, LoxError> {
         match expr {
             Expr::Literal { value } => match value {
                 Literal::String(val) => Ok(Object::String(val.clone())),
@@ -189,7 +189,7 @@ impl Interpreter {
                 let function: LoxCallable = match self.evaluate(callee)? {
                     Object::Callable(func) => func,
                     _ => {
-                        return Err(RuntimeError {
+                        return Err(LoxError::RuntimeError {
                             message: "Callee of a function must be a LoxCallable".to_string(),
                             token: Some(paren.clone()),
                         })
@@ -197,7 +197,7 @@ impl Interpreter {
                 };
 
                 if arguments_vals.len() != function.arity() {
-                    return Err(RuntimeError {
+                    return Err(LoxError::RuntimeError {
                         message: format!(
                             "Expected {} arguments but got {}.",
                             function.arity(),
@@ -217,19 +217,19 @@ impl Interpreter {
                 match operator.token_type {
                     TokenType::Bang => match right {
                         Object::Boolean(value) => Ok(Object::Boolean(!value)),
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operand must be a boolean.".to_string(),
                             token: Some(operator.clone()),
                         }),
                     },
                     TokenType::Minus => match right {
                         Object::Number(value) => Ok(Object::Number(-value)),
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operand must be a number.".to_string(),
                             token: Some(operator.clone()),
                         }),
                     },
-                    _ => Err(RuntimeError {
+                    _ => Err(LoxError::RuntimeError {
                         message: "Invalid operator.".to_string(),
                         token: Some(operator.clone()),
                     }),
@@ -250,7 +250,7 @@ impl Interpreter {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Number(val1 - val2))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
@@ -259,7 +259,7 @@ impl Interpreter {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Number(val1 / val2))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
@@ -273,7 +273,7 @@ impl Interpreter {
                             res.push_str(&val2);
                             Ok(Object::String(res))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operands must be both numbers or strings.".to_string(),
                             token: Some(operator.clone()),
                         }),
@@ -282,7 +282,7 @@ impl Interpreter {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Number(val1 * val2))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
@@ -291,7 +291,7 @@ impl Interpreter {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Boolean(val1 > val2))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
@@ -300,7 +300,7 @@ impl Interpreter {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Boolean(val1 >= val2))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
@@ -309,7 +309,7 @@ impl Interpreter {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Boolean(val1 < val2))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
@@ -318,20 +318,20 @@ impl Interpreter {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Boolean(val1 <= val2))
                         }
-                        _ => Err(RuntimeError {
+                        _ => Err(LoxError::RuntimeError {
                             message: "Operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
                     },
                     TokenType::BangEqual => Ok(Object::Boolean(!is_equal(left, right))),
                     TokenType::EqualEqual => Ok(Object::Boolean(is_equal(left, right))),
-                    _ => Err(RuntimeError {
+                    _ => Err(LoxError::RuntimeError {
                         message: "Invalid operator.".to_string(),
                         token: Some(operator.clone()),
                     }),
                 }
             }
-            _ => Err(RuntimeError {
+            _ => Err(LoxError::RuntimeError {
                 message: "Unsupported expression.".to_owned(),
                 token: None,
             }),

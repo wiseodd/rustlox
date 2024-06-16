@@ -1,4 +1,5 @@
 use crate::{
+    error::LoxError,
     interpreter::Interpreter,
     parser::Parser,
     scanner::Scanner,
@@ -89,14 +90,18 @@ impl Lox {
         }
     }
 
-    pub fn runtime_error(token: Option<Token>, message: &str) {
-        match token {
-            Some(token) => println!("{}\n[line {}]", message, token.line),
-            None => println!("{}", message),
-        }
-
-        unsafe {
-            HAD_RUNTIME_ERROR = true;
+    pub fn runtime_error(error: LoxError) {
+        match error {
+            LoxError::RuntimeError { message, token } => {
+                match token {
+                    Some(token) => println!("{}\n[line {}]", message, token.line),
+                    None => println!("{}", message),
+                }
+                unsafe {
+                    HAD_RUNTIME_ERROR = true;
+                }
+            }
+            _ => unreachable!(),
         }
     }
 

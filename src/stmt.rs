@@ -3,7 +3,6 @@ use crate::{expr::Expr, token::Token};
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Block {
-        // TODO: Convert to Vec<Option<Box<Stmt>>>
         statements: Vec<Option<Box<Stmt>>>,
     },
     Class {
@@ -30,7 +29,7 @@ pub enum Stmt {
     },
     Return {
         keyword: Token,
-        value: Expr,
+        value: Option<Expr>,
     },
     Var {
         name: Token,
