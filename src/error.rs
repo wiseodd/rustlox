@@ -1,6 +1,6 @@
 use crate::{object::Object, token::Token};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LoxError {
     ParseError,
     RuntimeError {

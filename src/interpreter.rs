@@ -48,7 +48,7 @@ impl Interpreter {
 
     pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) {
         for stmt in statements.into_iter().flatten() {
-            match stmt {
+            let _ = match stmt {
                 Stmt::Block { .. } => self.execute(
                     &stmt,
                     Some(Rc::new(RefCell::new(Environment::new(Some(
@@ -61,11 +61,19 @@ impl Interpreter {
     }
 
     // TODO: Modularize
-    pub fn execute(&mut self, stmt: &Stmt, environment: Option<Rc<RefCell<Environment>>>) {
+    pub fn execute(
+        &mut self,
+        stmt: &Stmt,
+        environment: Option<Rc<RefCell<Environment>>>,
+    ) -> Result<(), LoxError> {
         match stmt {
             Stmt::Expression { expression: expr } => match self.evaluate(expr) {
-                Ok(_) => (),
-                Err(error) => Lox::runtime_error(error),
+                Ok(_) => Ok(()),
+                Err(LoxError::Return { value }) => return Err(LoxError::Return { value }),
+                Err(error) => {
+                    Lox::runtime_error(error);
+                    Ok(())
+                }
             },
             Stmt::Function { name, params, body } => {
                 let function: LoxCallable = LoxCallable::User {
@@ -76,6 +84,7 @@ impl Interpreter {
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.clone(), Object::Callable(function));
+                Ok(())
             }
             Stmt::If {
                 condition,
@@ -84,41 +93,69 @@ impl Interpreter {
             } => {
                 let _cond: Object = match self.evaluate(condition) {
                     Ok(literal) => literal,
-                    Err(error) => return Lox::runtime_error(error),
+                    Err(LoxError::Return { value }) => return Err(LoxError::Return { value }),
+                    Err(error) => {
+                        Lox::runtime_error(error);
+                        return Ok(());
+                    }
                 };
 
                 if is_truthy(_cond) {
-                    self.execute(then_branch, environment);
+                    self.execute(then_branch, environment)?;
                 } else {
                     match &**else_branch {
                         Some(else_stmt) => self.execute(else_stmt, environment),
-                        _ => (), // do nothing
-                    };
+                        _ => Ok(()), // do nothing
+                    }?
                 }
+                Ok(())
             }
             Stmt::While { condition, body } => {
                 while is_truthy(match self.evaluate(condition) {
                     Ok(literal) => literal,
-                    Err(error) => return Lox::runtime_error(error),
+                    Err(LoxError::Return { value }) => return Err(LoxError::Return { value }),
+                    Err(error) => {
+                        Lox::runtime_error(error);
+                        return Ok(());
+                    }
                 }) {
-                    self.execute(body, environment.clone());
+                    self.execute(body, environment.clone())?;
                 }
+                Ok(())
             }
             Stmt::Print { expression: expr } => match self.evaluate(expr) {
-                Ok(lit) => println!("{}", stringify(lit)),
-                Err(error) => Lox::runtime_error(error),
+                Ok(lit) => {
+                    println!("{}", stringify(lit));
+                    Ok(())
+                }
+                Err(LoxError::Return { value }) => return Err(LoxError::Return { value }),
+                Err(error) => Err(error),
             },
+            Stmt::Return { value, .. } => {
+                let ret_val: Object = match value {
+                    Some(expr) => {
+                        //dbg!(expr.clone());
+                        let res = self.evaluate(&expr)?;
+                        //dbg!(res.clone());
+                        res
+                    }
+                    None => Object::None,
+                };
+
+                //dbg!(ret_val.clone());
+
+                Err(LoxError::Return { value: ret_val })
+            }
             Stmt::Var { name, initializer } => {
                 let value: Object = match initializer {
-                    Some(init_expr) => match self.evaluate(init_expr) {
-                        Ok(expr_val) => expr_val,
-                        Err(_) => Object::None,
-                    },
+                    Some(init_expr) => self.evaluate(init_expr)?,
                     None => Object::None,
                 };
 
                 let mut env = RefCell::borrow_mut(&self.environment);
                 env.define(name.lexeme.to_owned(), value);
+
+                Ok(())
             }
             Stmt::Block { statements } => {
                 let previous = self.environment.clone();
@@ -130,10 +167,12 @@ impl Interpreter {
                 };
 
                 for stmt in statements.to_owned().iter().flatten() {
-                    self.execute(stmt, environment.clone());
+                    self.execute(stmt, environment.clone())?;
                 }
 
                 self.environment = previous;
+
+                Ok(())
             }
             _ => unreachable!(),
         }
@@ -359,8 +398,8 @@ fn is_equal(a: Object, b: Object) -> bool {
     }
 }
 
-fn stringify(lit: Object) -> String {
-    match lit {
+fn stringify(obj: Object) -> String {
+    match obj {
         Object::None => "nil".to_owned(),
         Object::Number(val) => {
             // Integers are also stored as doubles.

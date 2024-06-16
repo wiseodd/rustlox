@@ -1,0 +1,9 @@
+fn test(n) {
+  for(var i = 0; i < 20; i = i + 1) {
+    if (i == n) return i;
+  }
+
+  return nil;
+}
+
+print test(19);

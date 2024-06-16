@@ -1,5 +1,6 @@
 use crate::{
-    environment::Environment, interpreter::Interpreter, object::Object, stmt::Stmt, token::Token,
+    environment::Environment, error::LoxError, interpreter::Interpreter, object::Object,
+    stmt::Stmt, token::Token,
 };
 use core::fmt;
 use std::{cell::RefCell, rc::Rc};
@@ -48,14 +49,21 @@ impl LoxCallable {
                     );
                 }
 
-                interpreter.execute(
+                let ret = interpreter.execute(
                     &Stmt::Block {
                         statements: body.clone(),
                     },
                     Some(environment),
                 );
 
-                Object::None
+                let ret_val: Object = match ret {
+                    Err(LoxError::Return { value }) => value,
+                    _ => Object::None,
+                };
+
+                //dbg!(ret_val.clone());
+
+                ret_val
             }
         }
     }
