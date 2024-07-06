@@ -16,6 +16,7 @@ pub mod resolver;
 pub mod scanner;
 pub mod stmt;
 pub mod token;
+pub mod util;
 
 fn main() -> Result<()> {
     let mut lox: Lox = Lox::new();

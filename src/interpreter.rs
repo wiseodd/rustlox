@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    collections::HashMap,
     rc::Rc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -21,6 +22,7 @@ type Pointer<T> = Rc<RefCell<T>>;
 pub struct Interpreter {
     pub globals: Pointer<Environment>,
     environment: Pointer<Environment>,
+    locals: HashMap<Expr, usize>,
 }
 
 impl Interpreter {
@@ -43,6 +45,7 @@ impl Interpreter {
         Interpreter {
             globals: globals.clone(),
             environment: globals.clone(),
+            locals: HashMap::new(),
         }
     }
 
@@ -179,12 +182,16 @@ impl Interpreter {
         }
     }
 
+    fn resolve(&mut self, expr: Expr, depth: usize) {
+        self.locals.insert(expr, depth);
+    }
+
     // TODO: Modularize
     fn evaluate(&mut self, expr: &Expr) -> Result<Object, LoxError> {
         match expr {
             Expr::Literal { value } => match value {
                 Literal::String(val) => Ok(Object::String(val.clone())),
-                Literal::Number(val) => Ok(Object::Number(val.clone())),
+                Literal::Number(val) => Ok(Object::Number(*val)),
                 Literal::Boolean(val) => Ok(Object::Boolean(val.clone())),
                 Literal::None => Ok(Object::None),
             },
@@ -263,7 +270,7 @@ impl Interpreter {
                         }),
                     },
                     TokenType::Minus => match right {
-                        Object::Number(value) => Ok(Object::Number(-value)),
+                        Object::Number(value) => Ok(Object::Number(-value.clone())),
                         _ => Err(LoxError::RuntimeError {
                             message: "Operand must be a number.".to_string(),
                             token: Some(operator.clone()),
