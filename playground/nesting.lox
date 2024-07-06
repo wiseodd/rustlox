@@ -1,0 +1,17 @@
+var x = 10;
+print x;
+
+{
+    var y = "this is a string";
+    print y;
+
+    {
+        var y = 12312.3;
+        print y;
+    }
+
+    // print z;
+
+    //print x;
+}
+

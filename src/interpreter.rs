@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     callable::LoxCallable,
-    environment::Environment,
+    environment::{self, Environment},
     error::LoxError,
     expr::Expr,
     lox::Lox,
@@ -21,8 +21,8 @@ type Pointer<T> = Rc<RefCell<T>>;
 #[derive(Default)]
 pub struct Interpreter {
     pub globals: Pointer<Environment>,
-    environment: Pointer<Environment>,
-    locals: HashMap<Expr, usize>,
+    pub environment: Pointer<Environment>,
+    pub locals: HashMap<Expr, usize>,
 }
 
 impl Interpreter {
@@ -156,8 +156,12 @@ impl Interpreter {
                     None => Object::None,
                 };
 
-                let mut env = RefCell::borrow_mut(&self.environment);
-                env.define(name.lexeme.to_owned(), value);
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.to_owned(), value);
+
+                dbg!(self.globals.borrow());
+                dbg!(self.environment.borrow());
 
                 Ok(())
             }
@@ -182,7 +186,7 @@ impl Interpreter {
         }
     }
 
-    fn resolve(&mut self, expr: Expr, depth: usize) {
+    pub fn resolve(&mut self, expr: Expr, depth: usize) {
         self.locals.insert(expr, depth);
     }
 
@@ -198,7 +202,18 @@ impl Interpreter {
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Assign { name, value } => {
                 let val: Object = self.evaluate(value)?;
-                self.environment.borrow_mut().assign(name, val.clone())?;
+
+                if let Some(distance) = self.locals.get(expr) {
+                    environment::assign_at(
+                        self.environment.clone(),
+                        *distance,
+                        name.clone(),
+                        val.clone(),
+                    )?;
+                } else {
+                    self.globals.borrow_mut().assign(name, val.clone())?;
+                }
+
                 Ok(val)
             }
             Expr::Logical {
@@ -282,7 +297,13 @@ impl Interpreter {
                     }),
                 }
             }
-            Expr::Variable { name } => self.environment.borrow_mut().get(name),
+            Expr::Variable { name } => {
+                if let Some(distance) = self.locals.get(expr) {
+                    environment::get_at(self.environment.clone(), *distance, name.lexeme.clone())
+                } else {
+                    self.globals.borrow_mut().get(name)
+                }
+            }
             Expr::Binary {
                 left,
                 operator,

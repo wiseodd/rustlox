@@ -1,24 +1,28 @@
-use crate::{
-    error::LoxError, expr::Expr, interpreter::Interpreter, lox::Lox, stmt::Stmt, token::Token,
-};
-use std::collections::HashMap;
+use crate::{expr::Expr, interpreter::Interpreter, lox::Lox, stmt::Stmt, token::Token};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 // #[derive(Debug, Default, Clone)]
 pub struct Resolver {
-    interpreter: Interpreter,
+    interpreter: Rc<RefCell<Interpreter>>,
     // The value of scopes (bool) indicates whether we have finished resolving the key
     scopes: Vec<HashMap<String, bool>>,
 }
 
 impl Resolver {
-    pub fn new(interpreter: Interpreter) -> Self {
+    pub fn new(interpreter: Rc<RefCell<Interpreter>>) -> Self {
         Resolver {
             interpreter,
             scopes: vec![],
         }
     }
 
-    pub fn resolve_stmt(&mut self, stmt: &Stmt) {
+    pub fn resolve_stmt_list(&mut self, statements: &Vec<Option<Box<Stmt>>>) {
+        for stmt in statements.into_iter().flatten() {
+            self.resolve_stmt(stmt);
+        }
+    }
+
+    fn resolve_stmt(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Block { statements } => {
                 // Nesting behaves like stack
@@ -36,6 +40,8 @@ impl Resolver {
                     self.resolve_expr(&init);
                 }
                 self.define(name.clone());
+
+                dbg!(&self.scopes);
             }
             Stmt::Function { name, params, body } => {
                 self.declare(name.clone());
@@ -69,7 +75,7 @@ impl Resolver {
         };
     }
 
-    pub fn resolve_expr(&mut self, expr: &Expr) {
+    fn resolve_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Variable { name } => {
                 if let Some(scope) = self.scopes.last() {
@@ -125,9 +131,9 @@ impl Resolver {
     }
 
     fn declare(&mut self, name: Token) {
-        if self.scopes.is_empty() {
-            return;
-        }
+        // if self.scopes.is_empty() {
+        //     return;
+        // }
 
         // Put the variable name into the current scope (top of the stack)
         if let Some(scope) = self.scopes.last_mut() {
@@ -138,9 +144,9 @@ impl Resolver {
     }
 
     fn define(&mut self, name: Token) {
-        if self.scopes.is_empty() {
-            return;
-        }
+        // if self.scopes.is_empty() {
+        //     return;
+        // }
 
         // Mark the declared varible as resolved
         if let Some(scope) = self.scopes.last_mut() {
@@ -148,20 +154,16 @@ impl Resolver {
         }
     }
 
-    fn resolve_stmt_list(&mut self, statements: &Vec<Option<Box<Stmt>>>) {
-        for stmt in statements.into_iter().flatten() {
-            self.resolve_stmt(stmt);
-        }
-    }
-
     fn resolve_local(&self, expr: &Expr, name: Token) {
         // Starting from the innermost scope (top of the stack), we check for `name`.
         // Then resolve it under the correct scope.
-        for i in (self.scopes.len() - 1)..0 {
-            if let Some(scope) = self.scopes.get(i) {
+        for i in (self.scopes.len() as isize - 1)..=0 {
+            let idx = i as usize;
+            if let Some(scope) = self.scopes.get(idx) {
                 if scope.contains_key(&name.lexeme) {
-                    // self.interpreter.resolve(expr, scopes.len() - 1 - i);
-                    return;
+                    self.interpreter
+                        .borrow_mut()
+                        .resolve(expr.clone(), self.scopes.len() - 1 - idx);
                 }
             }
         }

@@ -2,26 +2,27 @@ use crate::{
     error::LoxError,
     interpreter::Interpreter,
     parser::Parser,
+    resolver::Resolver,
     scanner::Scanner,
     stmt::Stmt,
     token::{Token, TokenType},
 };
 use anyhow::{anyhow, Result};
 use rustyline::error::ReadlineError;
-use std::{fs, process};
+use std::{cell::RefCell, fs, process, rc::Rc};
 
 static mut HAD_ERROR: bool = false;
 static mut HAD_RUNTIME_ERROR: bool = false;
 
 #[derive(Default)]
 pub struct Lox {
-    interpreter: Interpreter,
+    interpreter: Rc<RefCell<Interpreter>>,
 }
 
 impl Lox {
     pub fn new() -> Self {
         Lox {
-            interpreter: Interpreter::new(),
+            interpreter: Rc::new(RefCell::new(Interpreter::new())),
         }
     }
 
@@ -76,7 +77,25 @@ impl Lox {
             }
         }
 
-        self.interpreter.interpret(statements);
+        // Resolver does a static analysis. If it doesn't throw an error, then
+        // the syntax is clean and the interpreter can run confidently.
+        let mut resolver = Resolver::new(self.interpreter.clone());
+        // Vec<Option<Stmt>> -> Vec<Option<Box<Stmt>>>
+        resolver.resolve_stmt_list(
+            &statements
+                .iter()
+                .map(|x| match x {
+                    Some(stmt) => Some(Box::new(stmt.clone())),
+                    None => None,
+                })
+                .collect(),
+        );
+
+        // dbg!(self.interpreter.borrow().globals.clone());
+        // dbg!(self.interpreter.borrow().environment.clone());
+        // dbg!(self.interpreter.borrow().locals.clone());
+
+        self.interpreter.borrow_mut().interpret(statements);
     }
 
     pub fn error(line: usize, message: &str) {
