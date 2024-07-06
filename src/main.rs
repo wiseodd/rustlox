@@ -12,6 +12,7 @@ pub mod interpreter;
 pub mod lox;
 pub mod object;
 pub mod parser;
+pub mod resolver;
 pub mod scanner;
 pub mod stmt;
 pub mod token;
