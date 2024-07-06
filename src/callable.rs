@@ -15,7 +15,7 @@ pub enum LoxCallable {
         name: Token,
         params: Vec<Token>,
         body: Vec<Option<Box<Stmt>>>,
-        //closure: Rc<RefCell<Environment>>,
+        closure: Rc<RefCell<Environment>>,
         //is_initializer: bool,
     },
 }
@@ -35,12 +35,10 @@ impl LoxCallable {
                 name: _,
                 params,
                 body,
-                //closure: _,
-                //is_initializer: _,
+                closure, //is_initializer: _,
             } => {
-                let environment: Rc<RefCell<Environment>> = Rc::new(RefCell::new(
-                    Environment::new(Some(interpreter.globals.clone())),
-                ));
+                let environment: Rc<RefCell<Environment>> =
+                    Rc::new(RefCell::new(Environment::new(Some(closure.clone()))));
 
                 for i in 0..params.len() {
                     environment.borrow_mut().define(

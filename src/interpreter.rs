@@ -80,6 +80,7 @@ impl Interpreter {
                     name: name.clone(),
                     params: params.clone(),
                     body: body.to_vec(),
+                    closure: self.environment.clone(),
                 };
                 self.environment
                     .borrow_mut()
