@@ -25,9 +25,7 @@ impl Resolver {
                 // When a block is found, add the scope to the stack
                 self.begin_scope();
                 // Then resolve statements inside the scope
-                for stmt in statements.into_iter().flatten() {
-                    self.resolve_stmt(stmt);
-                }
+                self.resolve_stmt_list(statements);
                 // Exiting the scope => popping the stack
                 // The immediate outer scope is now the head
                 self.end_scope();
@@ -38,6 +36,34 @@ impl Resolver {
                     self.resolve_expr(&init);
                 }
                 self.define(name.clone());
+            }
+            Stmt::Function { name, params, body } => {
+                self.declare(name.clone());
+                self.define(name.clone());
+                self.resolve_function(params, body)
+            }
+            Stmt::Expression { expression } => self.resolve_expr(expression),
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.resolve_expr(condition);
+                self.resolve_stmt(then_branch);
+
+                if let Some(else_stmt) = else_branch.as_ref() {
+                    self.resolve_stmt(else_stmt);
+                }
+            }
+            Stmt::Print { expression } => self.resolve_expr(expression),
+            Stmt::Return { value, .. } => {
+                if let Some(expr) = value {
+                    self.resolve_expr(expr);
+                }
+            }
+            Stmt::While { condition, body } => {
+                self.resolve_expr(condition);
+                self.resolve_stmt(body);
             }
             _ => unreachable!(),
         };
@@ -63,6 +89,28 @@ impl Resolver {
                 // contain references to other variables (e.g. `var x = (a == b)`)
                 self.resolve_expr(value);
                 self.resolve_local(expr, name.clone());
+            }
+            Expr::Binary { left, right, .. } => {
+                self.resolve_expr(left);
+                self.resolve_expr(right);
+            }
+            Expr::Call {
+                callee, arguments, ..
+            } => {
+                self.resolve_expr(callee);
+
+                for arg in arguments.iter() {
+                    self.resolve_expr(arg);
+                }
+            }
+            Expr::Grouping { expression } => self.resolve_expr(expression),
+            Expr::Literal { .. } => (),
+            Expr::Logical { left, right, .. } => {
+                self.resolve_expr(left);
+                self.resolve_expr(right);
+            }
+            Expr::Unary { right, .. } => {
+                self.resolve_expr(right);
             }
             _ => unreachable!(),
         };
@@ -100,6 +148,12 @@ impl Resolver {
         }
     }
 
+    fn resolve_stmt_list(&mut self, statements: &Vec<Option<Box<Stmt>>>) {
+        for stmt in statements.into_iter().flatten() {
+            self.resolve_stmt(stmt);
+        }
+    }
+
     fn resolve_local(&self, expr: &Expr, name: Token) {
         // Starting from the innermost scope (top of the stack), we check for `name`.
         // Then resolve it under the correct scope.
@@ -111,5 +165,22 @@ impl Resolver {
                 }
             }
         }
+    }
+
+    fn resolve_function(&mut self, params: &Vec<Token>, body: &Vec<Option<Box<Stmt>>>) {
+        // Activate the function's scope
+        self.begin_scope();
+
+        // Resolve all arguments
+        for param in params {
+            self.declare(param.clone());
+            self.define(param.clone());
+        }
+
+        // Resolve the body block
+        self.resolve_stmt_list(body);
+
+        // Back to the outer scope
+        self.end_scope();
     }
 }
