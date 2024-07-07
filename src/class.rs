@@ -6,11 +6,16 @@ use crate::{error::LoxError, object::Object, token::Token};
 #[derive(Clone, Debug)]
 pub struct LoxClass {
     pub name: String,
+    methods: HashMap<String, Object>,
 }
 
 impl LoxClass {
-    pub fn new(name: String) -> Self {
-        LoxClass { name }
+    pub fn new(name: String, methods: HashMap<String, Object>) -> Self {
+        LoxClass { name, methods }
+    }
+
+    pub fn find_method(&self, name: String) -> Option<&Object> {
+        self.methods.get(&name)
     }
 }
 
@@ -36,13 +41,15 @@ impl LoxInstance {
 
     pub fn get(&self, name: Token) -> Result<Object, LoxError> {
         if let Some(field) = self.fields.get(&name.lexeme) {
-            Ok(field.clone())
-        } else {
-            Err(LoxError::RuntimeError {
-                message: format!("Undefined property '{}'.", name.lexeme),
-                token: Some(name),
-            })
+            return Ok(field.clone());
+        } else if let Some(method) = self.class.borrow().find_method(name.lexeme.to_owned()) {
+            return Ok(method.clone());
         }
+
+        Err(LoxError::RuntimeError {
+            message: format!("Undefined property '{}'.", name.lexeme.to_owned()),
+            token: Some(name),
+        })
     }
 
     pub fn set(&mut self, name: Token, value: Object) {

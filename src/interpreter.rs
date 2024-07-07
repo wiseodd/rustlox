@@ -167,7 +167,21 @@ impl Interpreter {
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.clone(), Object::None);
-                let class = LoxClass::new(name.lexeme.clone());
+
+                let mut methods_stmts: HashMap<String, Object> = HashMap::new();
+                for method in methods {
+                    if let Stmt::Function { name, params, body } = *method.to_owned() {
+                        let function: LoxCallable = LoxCallable::User {
+                            name: name.clone(),
+                            params: params.clone(),
+                            body: body.to_vec(),
+                            closure: self.environment.clone(),
+                        };
+                        methods_stmts.insert(name.lexeme, Object::Callable(function));
+                    }
+                }
+
+                let class = LoxClass::new(name.lexeme.clone(), methods_stmts);
                 let _ = self
                     .environment
                     .borrow_mut()

@@ -2,9 +2,15 @@ class Meat {
   serveOn() {
     return "Potatoes";
   }
+
+  eat() {
+    print "Yum yum!";
+  }
 }
 
 print Meat;
 
 var meat = Meat();
 print meat;
+meat.eat();
+

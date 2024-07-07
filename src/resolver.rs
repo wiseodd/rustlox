@@ -5,6 +5,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 enum FunctionType {
     None,
     Function,
+    Method,
 }
 
 // #[derive(Debug, Default, Clone)]
@@ -44,6 +45,16 @@ impl Resolver {
             }
             Stmt::Class { name, methods } => {
                 self.declare(name.clone());
+
+                for method in methods {
+                    match *method.to_owned() {
+                        Stmt::Function { params, body, .. } => {
+                            self.resolve_function(&params, &body, FunctionType::Method)
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+
                 self.define(name.clone());
             }
             Stmt::Var { name, initializer } => {
