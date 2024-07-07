@@ -199,7 +199,7 @@ impl Interpreter {
         match expr {
             Expr::Literal { value } => match value {
                 Literal::String(val) => Ok(Object::String(val.clone())),
-                Literal::Number(val) => Ok(Object::Number(*val)),
+                Literal::Number(val) => Ok(Object::Number(val.clone())),
                 Literal::Boolean(val) => Ok(Object::Boolean(val.clone())),
                 Literal::None => Ok(Object::None),
             },
