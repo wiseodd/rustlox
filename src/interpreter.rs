@@ -175,11 +175,18 @@ impl Interpreter {
         self.environment = environment.clone();
 
         for stmt in statements.to_owned().iter().flatten() {
-            self.execute(stmt)?;
+            match self.execute(stmt) {
+                Ok(()) => (), // All good, do nothing
+                Err(err) => {
+                    // Restore the original environment even after error
+                    self.environment = previous;
+                    return Err(err);
+                }
+            };
         }
 
+        // Restore the original env
         self.environment = previous;
-
         Ok(())
     }
 
@@ -364,12 +371,12 @@ impl Interpreter {
                             token: Some(operator.clone()),
                         }),
                     },
-                    TokenType::Less => match (left, right) {
+                    TokenType::Less => match (left.clone(), right.clone()) {
                         (Object::Number(val1), Object::Number(val2)) => {
                             Ok(Object::Boolean(val1 < val2))
                         }
                         _ => Err(LoxError::RuntimeError {
-                            message: "operands must be numbers.".to_string(),
+                            message: "Operands must be numbers.".to_string(),
                             token: Some(operator.clone()),
                         }),
                     },
