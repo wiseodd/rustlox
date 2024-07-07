@@ -1,11 +1,18 @@
 use crate::{expr::Expr, interpreter::Interpreter, lox::Lox, stmt::Stmt, token::Token};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+#[derive(Debug, Clone)]
+enum FunctionType {
+    None,
+    Function,
+}
+
 // #[derive(Debug, Default, Clone)]
 pub struct Resolver {
     interpreter: Rc<RefCell<Interpreter>>,
     // The value of scopes (bool) indicates whether we have finished resolving the key
     scopes: Vec<HashMap<String, bool>>,
+    current_function: FunctionType,
 }
 
 impl Resolver {
@@ -13,6 +20,7 @@ impl Resolver {
         Resolver {
             interpreter,
             scopes: vec![],
+            current_function: FunctionType::None,
         }
     }
 
@@ -40,13 +48,11 @@ impl Resolver {
                     self.resolve_expr(&init);
                 }
                 self.define(name.clone());
-
-                dbg!(&self.scopes);
             }
             Stmt::Function { name, params, body } => {
                 self.declare(name.clone());
                 self.define(name.clone());
-                self.resolve_function(params, body)
+                self.resolve_function(params, body, FunctionType::Function);
             }
             Stmt::Expression { expression } => self.resolve_expr(expression),
             Stmt::If {
@@ -62,7 +68,14 @@ impl Resolver {
                 }
             }
             Stmt::Print { expression } => self.resolve_expr(expression),
-            Stmt::Return { value, .. } => {
+            Stmt::Return { value, keyword } => {
+                match self.current_function {
+                    FunctionType::None => {
+                        Lox::parse_error(keyword, "Can't return from top-level code.")
+                    }
+                    _ => (),
+                };
+
                 if let Some(expr) = value {
                     self.resolve_expr(expr);
                 }
@@ -78,8 +91,8 @@ impl Resolver {
     fn resolve_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Variable { name } => {
-                if let Some(scope) = self.scopes.last() {
-                    if let Some(resolved) = scope.get(&name.lexeme) {
+                if !self.scopes.is_empty() {
+                    if let Some(resolved) = self.scopes.last().unwrap().get(&name.lexeme) {
                         if !resolved {
                             Lox::parse_error(
                                 name,
@@ -88,6 +101,8 @@ impl Resolver {
                         }
                     }
                 }
+                // dbg!(&self.scopes);
+                // dbg!(&name);
                 self.resolve_local(expr, name.clone());
             }
             Expr::Assign { name, value } => {
@@ -131,12 +146,12 @@ impl Resolver {
     }
 
     fn declare(&mut self, name: Token) {
-        // if self.scopes.is_empty() {
-        //     return;
-        // }
-
         // Put the variable name into the current scope (top of the stack)
         if let Some(scope) = self.scopes.last_mut() {
+            if scope.contains_key(&name.lexeme) {
+                Lox::parse_error(&name, "Already a variable with this name in this scope.");
+            }
+
             // This is just a declaration, so the value is `false`
             // since we haven't finished resolving `name`
             scope.insert(name.lexeme, false);
@@ -144,10 +159,6 @@ impl Resolver {
     }
 
     fn define(&mut self, name: Token) {
-        // if self.scopes.is_empty() {
-        //     return;
-        // }
-
         // Mark the declared varible as resolved
         if let Some(scope) = self.scopes.last_mut() {
             scope.insert(name.lexeme, true);
@@ -157,19 +168,25 @@ impl Resolver {
     fn resolve_local(&self, expr: &Expr, name: Token) {
         // Starting from the innermost scope (top of the stack), we check for `name`.
         // Then resolve it under the correct scope.
-        for i in (self.scopes.len() as isize - 1)..=0 {
-            let idx = i as usize;
-            if let Some(scope) = self.scopes.get(idx) {
-                if scope.contains_key(&name.lexeme) {
-                    self.interpreter
-                        .borrow_mut()
-                        .resolve(expr.clone(), self.scopes.len() - 1 - idx);
-                }
+        // If we don't find it in `self.scopes`, we assume that it's global or undefined.
+        for i in (0..self.scopes.len()).rev() {
+            if self.scopes.get(i).unwrap().contains_key(&name.lexeme) {
+                self.interpreter
+                    .borrow_mut()
+                    .resolve(expr.clone(), self.scopes.len() - 1 - i);
             }
         }
     }
 
-    fn resolve_function(&mut self, params: &Vec<Token>, body: &Vec<Option<Box<Stmt>>>) {
+    fn resolve_function(
+        &mut self,
+        params: &Vec<Token>,
+        body: &Vec<Option<Box<Stmt>>>,
+        func_type: FunctionType,
+    ) {
+        let enclosing_func: FunctionType = self.current_function.clone();
+        self.current_function = func_type;
+
         // Activate the function's scope
         self.begin_scope();
 
@@ -184,5 +201,7 @@ impl Resolver {
 
         // Back to the outer scope
         self.end_scope();
+
+        self.current_function = enclosing_func;
     }
 }

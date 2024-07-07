@@ -91,6 +91,12 @@ impl Lox {
                 .collect(),
         );
 
+        unsafe {
+            if HAD_ERROR {
+                return;
+            }
+        }
+
         // dbg!(self.interpreter.borrow().globals.clone());
         // dbg!(self.interpreter.borrow().environment.clone());
         // dbg!(self.interpreter.borrow().locals.clone());

@@ -13,7 +13,7 @@ use crate::{
     lox::Lox,
     object::Object,
     stmt::Stmt,
-    token::{Literal, TokenType},
+    token::{Literal, Token, TokenType},
 };
 
 type Pointer<T> = Rc<RefCell<T>>;
@@ -51,24 +51,12 @@ impl Interpreter {
 
     pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) {
         for stmt in statements.into_iter().flatten() {
-            let _ = match stmt {
-                Stmt::Block { .. } => self.execute(
-                    &stmt,
-                    Some(Rc::new(RefCell::new(Environment::new(Some(
-                        self.environment.clone(),
-                    ))))),
-                ),
-                _ => self.execute(&stmt, None),
-            };
+            let _ = self.execute(&stmt);
         }
     }
 
     // TODO: Modularize
-    pub fn execute(
-        &mut self,
-        stmt: &Stmt,
-        environment: Option<Rc<RefCell<Environment>>>,
-    ) -> Result<(), LoxError> {
+    pub fn execute(&mut self, stmt: &Stmt) -> Result<(), LoxError> {
         match stmt {
             Stmt::Expression { expression: expr } => match self.evaluate(expr) {
                 Ok(_) => Ok(()),
@@ -105,10 +93,10 @@ impl Interpreter {
                 };
 
                 if is_truthy(_cond) {
-                    self.execute(then_branch, environment)?;
+                    self.execute(then_branch)?;
                 } else {
                     match &**else_branch {
-                        Some(else_stmt) => self.execute(else_stmt, environment),
+                        Some(else_stmt) => self.execute(else_stmt),
                         _ => Ok(()), // do nothing
                     }?
                 }
@@ -123,7 +111,7 @@ impl Interpreter {
                         return Ok(());
                     }
                 }) {
-                    self.execute(body, environment.clone())?;
+                    self.execute(body)?;
                 }
                 Ok(())
             }
@@ -156,34 +144,43 @@ impl Interpreter {
                     None => Object::None,
                 };
 
+                // dbg!(name);
+                // dbg!(environment.clone());
+                // dbg!("----------------------------");
+                // let mut input = String::new();
+                // let _ = std::io::stdin().read_line(&mut input);
+
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.to_owned(), value);
 
-                dbg!(self.globals.borrow());
-                dbg!(self.environment.borrow());
-
                 Ok(())
             }
-            Stmt::Block { statements } => {
-                let previous = self.environment.clone();
-                self.environment = match environment {
-                    Some(ref env) => env.clone(),
-                    None => Rc::new(RefCell::new(Environment::new(Some(
-                        self.environment.clone(),
-                    )))),
-                };
-
-                for stmt in statements.to_owned().iter().flatten() {
-                    self.execute(stmt, environment.clone())?;
-                }
-
-                self.environment = previous;
-
-                Ok(())
-            }
+            Stmt::Block { statements } => self.execute_block(
+                statements,
+                Rc::new(RefCell::new(Environment::new(Some(
+                    self.environment.clone(),
+                )))),
+            ),
             _ => unreachable!(),
         }
+    }
+
+    pub fn execute_block(
+        &mut self,
+        statements: &Vec<Option<Box<Stmt>>>,
+        environment: Rc<RefCell<Environment>>,
+    ) -> Result<(), LoxError> {
+        let previous = self.environment.clone();
+        self.environment = environment.clone();
+
+        for stmt in statements.to_owned().iter().flatten() {
+            self.execute(stmt)?;
+        }
+
+        self.environment = previous;
+
+        Ok(())
     }
 
     pub fn resolve(&mut self, expr: Expr, depth: usize) {
@@ -297,13 +294,7 @@ impl Interpreter {
                     }),
                 }
             }
-            Expr::Variable { name } => {
-                if let Some(distance) = self.locals.get(expr) {
-                    environment::get_at(self.environment.clone(), *distance, name.lexeme.clone())
-                } else {
-                    self.globals.borrow_mut().get(name)
-                }
-            }
+            Expr::Variable { name } => self.look_up_variable(name, expr),
             Expr::Binary {
                 left,
                 operator,
@@ -403,6 +394,14 @@ impl Interpreter {
                 message: "Unsupported expression.".to_owned(),
                 token: None,
             }),
+        }
+    }
+
+    fn look_up_variable(&self, name: &Token, expr: &Expr) -> Result<Object, LoxError> {
+        if let Some(distance) = self.locals.get(expr) {
+            environment::get_at(self.environment.clone(), *distance, name.lexeme.clone())
+        } else {
+            self.globals.borrow_mut().get(name)
         }
     }
 }

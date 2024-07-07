@@ -47,12 +47,7 @@ impl LoxCallable {
                     );
                 }
 
-                let ret = interpreter.execute(
-                    &Stmt::Block {
-                        statements: body.clone(),
-                    },
-                    Some(environment),
-                );
+                let ret = interpreter.execute_block(body, environment);
 
                 let ret_val: Object = match ret {
                     Err(LoxError::Return { value }) => value,

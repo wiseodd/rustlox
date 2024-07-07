@@ -2,16 +2,17 @@ var x = 10;
 print x;
 
 {
-    var y = "this is a string";
+    var y = 20;
     print y;
 
     {
-        var y = 12312.3;
+        var z = 30;
         print y;
+
+        {
+          var a = 123;
+          print y;
+        }
     }
-
-    // print z;
-
-    //print x;
 }
 

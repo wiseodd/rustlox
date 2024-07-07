@@ -59,19 +59,6 @@ impl Environment {
             }
         }
     }
-
-    fn ancestor(
-        environment: Rc<RefCell<Environment>>,
-        distance: usize,
-    ) -> Rc<RefCell<Environment>> {
-        let mut env = Some(environment.clone());
-
-        for _ in 0..distance {
-            env = env.unwrap().borrow_mut().enclosing.clone();
-        }
-
-        env.unwrap()
-    }
 }
 
 pub fn get_at(
@@ -79,18 +66,19 @@ pub fn get_at(
     distance: usize,
     name: String,
 ) -> Result<Object, LoxError> {
-    if let Some(val) = Environment::ancestor(environment, distance)
+    // dbg!(environment.clone());
+    // dbg!("----------------------------");
+    // let mut input = String::new();
+    // let _ = std::io::stdin().read_line(&mut input);
+    if let Some(val) = ancestor(environment, distance)
         .borrow_mut()
         .values
         .get(&name)
     {
-        Ok(val.clone())
-    } else {
-        Err(LoxError::RuntimeError {
-            message: format!("Undefined variable '{}'", name),
-            token: None,
-        })
+        return Ok(val.clone());
     }
+
+    Ok(Object::None)
 }
 
 pub fn assign_at(
@@ -99,10 +87,20 @@ pub fn assign_at(
     name: Token,
     value: Object,
 ) -> Result<(), LoxError> {
-    Environment::ancestor(environment.clone(), distance)
+    ancestor(environment.clone(), distance)
         .borrow_mut()
         .values
         .insert(name.lexeme, value);
 
     Ok(())
+}
+
+fn ancestor(environment: Rc<RefCell<Environment>>, distance: usize) -> Rc<RefCell<Environment>> {
+    let mut env = Some(environment.clone());
+
+    for _ in 0..distance {
+        env = env.unwrap().borrow_mut().enclosing.clone();
+    }
+
+    env.unwrap()
 }
