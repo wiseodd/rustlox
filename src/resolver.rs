@@ -129,6 +129,10 @@ impl Resolver {
                 }
             }
             Expr::Get { object, .. } => self.resolve_expr(object),
+            Expr::Set { object, value, .. } => {
+                self.resolve_expr(value);
+                self.resolve_expr(object);
+            }
             Expr::Grouping { expression } => self.resolve_expr(expression),
             Expr::Literal { .. } => (),
             Expr::Logical { left, right, .. } => {

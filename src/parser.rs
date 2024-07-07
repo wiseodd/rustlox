@@ -334,22 +334,25 @@ impl Parser {
         self.assignment()
     }
 
-    // assignment -> IDENTIFIER "=" assignment | logic_or ;
+    // assignment -> ( call "." )? IDENTIFIER "=" assignment | logic_or ;
     fn assignment(&mut self) -> Result<Expr, LoxError> {
         let expr: Expr = self.or()?;
 
         if self.is_match_advance(&[TokenType::Equal]) {
             let equals: Token = self.previous().to_owned();
-            let value: Expr = self.assignment()?;
+            let value: Box<Expr> = Box::new(self.assignment()?);
 
-            if let Expr::Variable { name } = expr {
-                return Ok(Expr::Assign {
-                    name,
-                    value: Box::new(value),
-                });
-            };
-
-            return Err(Self::error(&equals, "Invalid assignment target."));
+            match expr {
+                Expr::Variable { name } => return Ok(Expr::Assign { name, value }),
+                Expr::Get { object, name } => {
+                    return Ok(Expr::Set {
+                        object,
+                        name,
+                        value,
+                    })
+                }
+                _ => return Err(Self::error(&equals, "Invalid assignment target.")),
+            }
         }
 
         Ok(expr)

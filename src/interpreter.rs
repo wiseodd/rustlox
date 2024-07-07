@@ -168,12 +168,12 @@ impl Interpreter {
                     .borrow_mut()
                     .define(name.lexeme.clone(), Object::None);
                 let class = LoxClass::new(name.lexeme.clone());
-                self.environment
+                let _ = self
+                    .environment
                     .borrow_mut()
                     .assign(name, Object::Class(class));
                 Ok(())
             }
-            _ => unreachable!(),
         }
     }
 
@@ -291,6 +291,21 @@ impl Interpreter {
                 _ => Err(LoxError::RuntimeError {
                     message: "Only instances have properties.".to_owned(),
                     token: Some(name.to_owned()),
+                }),
+            },
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => match self.evaluate(object)? {
+                Object::Instance(mut instance) => {
+                    let value: Object = self.evaluate(value)?;
+                    instance.set(name.clone(), value.clone());
+                    Ok(value)
+                }
+                _ => Err(LoxError::RuntimeError {
+                    message: "Only instances have fields".to_owned(),
+                    token: Some(name.clone()),
                 }),
             },
             Expr::Unary { operator, right } => {
