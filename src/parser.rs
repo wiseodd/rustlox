@@ -482,13 +482,20 @@ impl Parser {
         self.call()
     }
 
-    // call -> primary ( "(" arguments? ")" )* ;
+    // call -> primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
     fn call(&mut self) -> Result<Expr, LoxError> {
         let mut expr: Expr = self.primary()?;
 
         loop {
             if self.is_match_advance(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.is_match_advance(&[TokenType::Dot]) {
+                let name: Token =
+                    self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name,
+                }
             } else {
                 break;
             }

@@ -286,6 +286,13 @@ impl Interpreter {
                     }),
                 }
             }
+            Expr::Get { object, name } => match self.evaluate(object)? {
+                Object::Instance(instance) => Ok(instance.get(name.clone()))?,
+                _ => Err(LoxError::RuntimeError {
+                    message: "Only instances have properties.".to_owned(),
+                    token: Some(name.to_owned()),
+                }),
+            },
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)
                 let right: Object = self.evaluate(right)?;

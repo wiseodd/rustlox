@@ -128,6 +128,7 @@ impl Resolver {
                     self.resolve_expr(arg);
                 }
             }
+            Expr::Get { object, .. } => self.resolve_expr(object),
             Expr::Grouping { expression } => self.resolve_expr(expression),
             Expr::Literal { .. } => (),
             Expr::Logical { left, right, .. } => {
