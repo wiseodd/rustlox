@@ -29,8 +29,18 @@ impl Parser {
         statements
     }
 
-    // declaration -> fnDecl | varDecl | statement ;
+    // declaration -> classDecl | fnDecl | varDecl | statement ;
     fn declaration(&mut self) -> Option<Stmt> {
+        if self.is_match_advance(&[TokenType::Class]) {
+            return match self.class_declaration() {
+                Ok(stmt) => Some(stmt),
+                Err(_) => {
+                    self.synchronize();
+                    None
+                }
+            };
+        }
+
         if self.is_match_advance(&[TokenType::Fn]) {
             return match self.function("function".to_string()) {
                 Ok(stmt) => Some(stmt),
@@ -58,6 +68,21 @@ impl Parser {
                 None
             }
         }
+    }
+
+    // classDecl -> "class" IDENTIFIER "{" function* "}" ;
+    fn class_declaration(&mut self) -> Result<Stmt, LoxError> {
+        let name: Token = self.consume(TokenType::Identifier, "Expect class name.")?;
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
+
+        let mut methods: Vec<Box<Stmt>> = vec![];
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            methods.push(Box::new(self.function("method".to_owned())?));
+        }
+
+        let _ = self.consume(TokenType::RightBrace, "Expect '}' after class body.");
+
+        Ok(Stmt::Class { name, methods })
     }
 
     // function -> IDENTIFIER "(" parameters? ")" block ;

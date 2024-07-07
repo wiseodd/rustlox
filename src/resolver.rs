@@ -42,6 +42,10 @@ impl Resolver {
                 // The immediate outer scope is now the head
                 self.end_scope();
             }
+            Stmt::Class { name, methods } => {
+                self.declare(name.clone());
+                self.define(name.clone());
+            }
             Stmt::Var { name, initializer } => {
                 self.declare(name.clone());
                 if let Some(init) = initializer {

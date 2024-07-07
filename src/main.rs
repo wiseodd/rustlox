@@ -5,6 +5,7 @@ use std::{cmp::Ordering, env, process};
 
 pub mod ast;
 pub mod callable;
+pub mod class;
 pub mod environment;
 pub mod error;
 pub mod expr;

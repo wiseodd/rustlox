@@ -1,0 +1,7 @@
+class Meat {
+  serveOn() {
+    return "Potatoes";
+  }
+}
+
+print Meat;

@@ -7,6 +7,7 @@ use std::{
 
 use crate::{
     callable::LoxCallable,
+    class::LoxClass,
     environment::{self, Environment},
     error::LoxError,
     expr::Expr,
@@ -162,6 +163,16 @@ impl Interpreter {
                     self.environment.clone(),
                 )))),
             ),
+            Stmt::Class { name, methods } => {
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.clone(), Object::None);
+                let class = LoxClass::new(name.lexeme.clone());
+                self.environment
+                    .borrow_mut()
+                    .assign(name, Object::Class(class));
+                Ok(())
+            }
             _ => unreachable!(),
         }
     }
@@ -449,5 +460,6 @@ fn stringify(obj: Object) -> String {
         Object::Boolean(val) => val.to_string(),
         Object::String(val) => format!("{val}"),
         Object::Callable(name) => format!("Callable with name {name}"),
+        Object::Class(name) => format!("Class with name {name}"),
     }
 }

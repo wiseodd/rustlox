@@ -7,7 +7,6 @@ pub enum Stmt {
     },
     Class {
         name: Token,
-        superclass: Expr,
         methods: Vec<Box<Stmt>>,
     },
     Expression {
