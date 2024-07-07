@@ -1,4 +1,7 @@
-use crate::{callable::LoxCallable, class::LoxClass};
+use crate::{
+    callable::LoxCallable,
+    class::{LoxClass, LoxInstance},
+};
 
 #[derive(strum_macros::Display, Clone, Debug)]
 pub enum Object {
@@ -7,5 +10,6 @@ pub enum Object {
     Boolean(bool),
     Callable(LoxCallable),
     Class(LoxClass),
+    Instance(LoxInstance),
     None,
 }

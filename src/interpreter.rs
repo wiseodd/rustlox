@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     callable::LoxCallable,
-    class::LoxClass,
+    class::{LoxClass, LoxInstance},
     environment::{self, Environment},
     error::LoxError,
     expr::Expr,
@@ -263,28 +263,28 @@ impl Interpreter {
                     arguments_vals.push(self.evaluate(arg)?);
                 }
 
-                let function: LoxCallable = match self.evaluate(callee)? {
-                    Object::Callable(func) => func,
-                    _ => {
-                        return Err(LoxError::RuntimeError {
-                            message: "Callee of a function must be a LoxCallable".to_string(),
-                            token: Some(paren.clone()),
-                        })
+                match self.evaluate(callee)? {
+                    Object::Class(class) => Ok(Object::Instance(LoxInstance::new(Rc::new(
+                        RefCell::new(class.clone()),
+                    )))),
+                    Object::Callable(function) => {
+                        if arguments_vals.len() != function.arity() {
+                            return Err(LoxError::RuntimeError {
+                                message: format!(
+                                    "Expected {} arguments but got {}.",
+                                    function.arity(),
+                                    arguments.len()
+                                ),
+                                token: Some(paren.clone()),
+                            });
+                        }
+                        Ok(function.call(self, &arguments_vals))
                     }
-                };
-
-                if arguments_vals.len() != function.arity() {
-                    return Err(LoxError::RuntimeError {
-                        message: format!(
-                            "Expected {} arguments but got {}.",
-                            function.arity(),
-                            arguments.len()
-                        ),
+                    _ => Err(LoxError::RuntimeError {
+                        message: "Callee must be a callable or a class".to_string(),
                         token: Some(paren.clone()),
-                    });
+                    }),
                 }
-
-                return Ok(function.call(self, &arguments_vals));
             }
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)
@@ -459,7 +459,8 @@ fn stringify(obj: Object) -> String {
         }
         Object::Boolean(val) => val.to_string(),
         Object::String(val) => format!("{val}"),
-        Object::Callable(name) => format!("Callable with name {name}"),
-        Object::Class(name) => format!("Class with name {name}"),
+        Object::Callable(name) => format!("{name}"),
+        Object::Class(name) => format!("{name}"),
+        Object::Instance(name) => format!("{name}"),
     }
 }

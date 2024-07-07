@@ -5,3 +5,6 @@ class Meat {
 }
 
 print Meat;
+
+var meat = Meat();
+print meat;
