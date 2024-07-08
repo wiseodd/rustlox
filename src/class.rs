@@ -39,6 +39,8 @@ impl LoxInstance {
         }))
     }
 
+    // Kinda ugly to require `instance_ref`, which is the same as `&self`.
+    // But I see no other way.
     pub fn get(&self, name: Token, instance_ref: Rc<RefCell<Self>>) -> Result<Object, LoxError> {
         if let Some(field) = self.fields.get(&name.lexeme) {
             return Ok(field.clone());

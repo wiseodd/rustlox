@@ -8,12 +8,19 @@ enum FunctionType {
     Method,
 }
 
+#[derive(Debug, Clone)]
+enum ClassType {
+    None,
+    Class,
+}
+
 // #[derive(Debug, Default, Clone)]
 pub struct Resolver {
     interpreter: Rc<RefCell<Interpreter>>,
     // The value of scopes (bool) indicates whether we have finished resolving the key
     scopes: Vec<HashMap<String, bool>>,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 impl Resolver {
@@ -22,6 +29,7 @@ impl Resolver {
             interpreter,
             scopes: vec![],
             current_function: FunctionType::None,
+            current_class: ClassType::None,
         }
     }
 
@@ -44,6 +52,9 @@ impl Resolver {
                 self.end_scope();
             }
             Stmt::Class { name, methods } => {
+                let enclosing_class: ClassType = self.current_class.clone();
+                self.current_class = ClassType::Class;
+
                 self.declare(name.clone());
                 self.define(name.clone());
 
@@ -63,6 +74,8 @@ impl Resolver {
                 }
 
                 self.end_scope();
+
+                self.current_class = enclosing_class;
             }
             Stmt::Var { name, initializer } => {
                 self.declare(name.clone());
@@ -150,7 +163,12 @@ impl Resolver {
                 self.resolve_expr(value);
                 self.resolve_expr(object);
             }
-            Expr::This { keyword } => self.resolve_local(expr, keyword.clone()),
+            Expr::This { keyword } => match self.current_class {
+                ClassType::Class => self.resolve_local(expr, keyword.clone()),
+                ClassType::None => {
+                    Lox::parse_error(keyword, "Can't use 'this' outside of a class.")
+                }
+            },
             Expr::Grouping { expression } => self.resolve_expr(expression),
             Expr::Literal { .. } => (),
             Expr::Logical { left, right, .. } => {
