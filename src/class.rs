@@ -1,21 +1,21 @@
 use core::fmt;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{error::LoxError, object::Object, token::Token};
+use crate::{callable::LoxCallable, error::LoxError, object::Object, token::Token};
 
 #[derive(Clone, Debug)]
 pub struct LoxClass {
     pub name: String,
-    methods: HashMap<String, Object>,
+    pub methods: HashMap<String, LoxCallable>,
 }
 
 impl LoxClass {
-    pub fn new(name: String, methods: HashMap<String, Object>) -> Self {
+    pub fn new(name: String, methods: HashMap<String, LoxCallable>) -> Self {
         LoxClass { name, methods }
     }
 
-    pub fn find_method(&self, name: String) -> Option<&Object> {
-        self.methods.get(&name)
+    pub fn find_method(&self, name: &str) -> Option<LoxCallable> {
+        self.methods.get(name).map(|c| c.clone())
     }
 }
 
@@ -32,18 +32,20 @@ pub struct LoxInstance {
 }
 
 impl LoxInstance {
-    pub fn new(class: Rc<RefCell<LoxClass>>) -> Self {
-        LoxInstance {
+    pub fn new(class: Rc<RefCell<LoxClass>>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(LoxInstance {
             class,
             fields: HashMap::new(),
-        }
+        }))
     }
 
-    pub fn get(&self, name: Token) -> Result<Object, LoxError> {
+    pub fn get(&self, name: Token, instance_ref: Rc<RefCell<Self>>) -> Result<Object, LoxError> {
         if let Some(field) = self.fields.get(&name.lexeme) {
             return Ok(field.clone());
-        } else if let Some(method) = self.class.borrow().find_method(name.lexeme.to_owned()) {
-            return Ok(method.clone());
+        } else if let Some(method) = self.class.borrow().find_method(&name.lexeme) {
+            return Ok(Object::Callable(
+                method.bind(Object::Instance(instance_ref.clone())),
+            ));
         }
 
         Err(LoxError::RuntimeError {

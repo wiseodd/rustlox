@@ -45,6 +45,13 @@ impl Resolver {
             }
             Stmt::Class { name, methods } => {
                 self.declare(name.clone());
+                self.define(name.clone());
+
+                self.begin_scope();
+                self.scopes
+                    .last_mut()
+                    .unwrap()
+                    .insert("this".to_owned(), true);
 
                 for method in methods {
                     match *method.to_owned() {
@@ -55,7 +62,7 @@ impl Resolver {
                     }
                 }
 
-                self.define(name.clone());
+                self.end_scope();
             }
             Stmt::Var { name, initializer } => {
                 self.declare(name.clone());
@@ -99,7 +106,6 @@ impl Resolver {
                 self.resolve_expr(condition);
                 self.resolve_stmt(body);
             }
-            _ => unreachable!(),
         };
     }
 
@@ -144,6 +150,7 @@ impl Resolver {
                 self.resolve_expr(value);
                 self.resolve_expr(object);
             }
+            Expr::This { keyword } => self.resolve_local(expr, keyword.clone()),
             Expr::Grouping { expression } => self.resolve_expr(expression),
             Expr::Literal { .. } => (),
             Expr::Logical { left, right, .. } => {

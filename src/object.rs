@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     callable::LoxCallable,
     class::{LoxClass, LoxInstance},
@@ -10,6 +12,6 @@ pub enum Object {
     Boolean(bool),
     Callable(LoxCallable),
     Class(LoxClass),
-    Instance(LoxInstance),
+    Instance(Rc<RefCell<LoxInstance>>),
     None,
 }

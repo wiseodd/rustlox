@@ -60,6 +60,27 @@ impl LoxCallable {
             }
         }
     }
+
+    pub fn bind(&self, instance: Object) -> LoxCallable {
+        match self {
+            LoxCallable::User {
+                name,
+                params,
+                body,
+                closure,
+            } => {
+                let environment = Rc::new(RefCell::new(Environment::new(Some(closure.clone()))));
+                environment.borrow_mut().define("this".to_owned(), instance);
+                LoxCallable::User {
+                    name: name.clone(),
+                    params: params.clone(),
+                    body: body.clone(),
+                    closure: environment,
+                }
+            }
+            LoxCallable::Native { .. } => unreachable!(),
+        }
+    }
 }
 
 impl fmt::Display for LoxCallable {

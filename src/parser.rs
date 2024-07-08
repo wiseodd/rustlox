@@ -568,6 +568,12 @@ impl Parser {
             });
         }
 
+        if self.is_match_advance(&[TokenType::This]) {
+            return Ok(Expr::This {
+                keyword: self.previous().clone(),
+            });
+        }
+
         if self.is_match_advance(&[TokenType::Identifier]) {
             return Ok(Expr::Variable {
                 name: self.previous().to_owned(),

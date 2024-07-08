@@ -13,4 +13,4 @@ print Meat;
 var meat = Meat();
 print meat;
 meat.eat();
-
+print meat.serveOn();

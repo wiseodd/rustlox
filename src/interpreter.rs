@@ -168,7 +168,7 @@ impl Interpreter {
                     .borrow_mut()
                     .define(name.lexeme.clone(), Object::None);
 
-                let mut methods_stmts: HashMap<String, Object> = HashMap::new();
+                let mut methods_stmts: HashMap<String, LoxCallable> = HashMap::new();
                 for method in methods {
                     if let Stmt::Function { name, params, body } = *method.to_owned() {
                         let function: LoxCallable = LoxCallable::User {
@@ -177,7 +177,7 @@ impl Interpreter {
                             body: body.to_vec(),
                             closure: self.environment.clone(),
                         };
-                        methods_stmts.insert(name.lexeme, Object::Callable(function));
+                        methods_stmts.insert(name.lexeme, function);
                     }
                 }
 
@@ -301,7 +301,9 @@ impl Interpreter {
                 }
             }
             Expr::Get { object, name } => match self.evaluate(object)? {
-                Object::Instance(instance) => Ok(instance.get(name.clone()))?,
+                Object::Instance(instance) => {
+                    Ok(instance.borrow().get(name.clone(), instance.clone()))?
+                }
                 _ => Err(LoxError::RuntimeError {
                     message: "Only instances have properties.".to_owned(),
                     token: Some(name.to_owned()),
@@ -312,9 +314,9 @@ impl Interpreter {
                 name,
                 value,
             } => match self.evaluate(object)? {
-                Object::Instance(mut instance) => {
+                Object::Instance(instance) => {
                     let value: Object = self.evaluate(value)?;
-                    instance.set(name.clone(), value.clone());
+                    instance.borrow_mut().set(name.clone(), value.clone());
                     Ok(value)
                 }
                 _ => Err(LoxError::RuntimeError {
@@ -322,6 +324,9 @@ impl Interpreter {
                     token: Some(name.clone()),
                 }),
             },
+            Expr::This { keyword } => {
+                return self.look_up_variable(keyword, expr);
+            }
             Expr::Unary { operator, right } => {
                 // Recursion to get the leaf (always a literal)
                 let right: Object = self.evaluate(right)?;
@@ -497,6 +502,6 @@ fn stringify(obj: Object) -> String {
         Object::String(val) => format!("{val}"),
         Object::Callable(name) => format!("{name}"),
         Object::Class(name) => format!("{name}"),
-        Object::Instance(name) => format!("{name}"),
+        Object::Instance(instance) => format!("{}", instance.borrow()),
     }
 }
