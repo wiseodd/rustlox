@@ -128,11 +128,15 @@ impl Interpreter {
             Stmt::Return { value, .. } => {
                 let ret_val: Object = match value {
                     Some(expr) => {
+                        //dbg!(expr.clone());
                         let res = self.evaluate(&expr)?;
+                        //dbg!(res.clone());
                         res
                     }
                     None => Object::None,
                 };
+
+                //dbg!(ret_val.clone());
 
                 Err(LoxError::Return { value: ret_val })
             }
@@ -141,6 +145,12 @@ impl Interpreter {
                     Some(init_expr) => self.evaluate(init_expr)?,
                     None => Object::None,
                 };
+
+                // dbg!(name);
+                // dbg!(environment.clone());
+                // dbg!("----------------------------");
+                // let mut input = String::new();
+                // let _ = std::io::stdin().read_line(&mut input);
 
                 self.environment
                     .borrow_mut()
@@ -167,7 +177,7 @@ impl Interpreter {
                             params: params.clone(),
                             body: body.to_vec(),
                             closure: self.environment.clone(),
-                            is_initializer: name.lexeme.eq("init"),
+                            is_initializer: name.eq("init"),
                         };
                         methods_stmts.insert(name.lexeme, function);
                     }

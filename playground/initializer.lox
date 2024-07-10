@@ -1,6 +1,6 @@
 class Foo {
   init() {
-    this.x = 50;
+
   }
 
   get_x(y) {
