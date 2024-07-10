@@ -1,6 +1,10 @@
 use crate::{
-    environment::Environment, error::LoxError, interpreter::Interpreter, object::Object,
-    stmt::Stmt, token::Token,
+    environment::{self, Environment},
+    error::LoxError,
+    interpreter::Interpreter,
+    object::Object,
+    stmt::Stmt,
+    token::Token,
 };
 use core::fmt;
 use std::{cell::RefCell, rc::Rc};
@@ -16,7 +20,7 @@ pub enum LoxCallable {
         params: Vec<Token>,
         body: Vec<Option<Box<Stmt>>>,
         closure: Rc<RefCell<Environment>>,
-        //is_initializer: bool,
+        is_initializer: bool,
     },
 }
 
@@ -35,26 +39,37 @@ impl LoxCallable {
                 name: _,
                 params,
                 body,
-                closure, //is_initializer: _,
+                closure,
+                is_initializer,
             } => {
-                let environment: Rc<RefCell<Environment>> =
+                let env: Rc<RefCell<Environment>> =
                     Rc::new(RefCell::new(Environment::new(Some(closure.clone()))));
 
                 for i in 0..params.len() {
-                    environment.borrow_mut().define(
+                    env.borrow_mut().define(
                         params.get(i).unwrap().lexeme.clone(),
                         arguments.get(i).unwrap().clone(),
                     );
                 }
 
-                let ret = interpreter.execute_block(body, environment);
+                let ret = interpreter.execute_block(body, env.clone());
 
                 let ret_val: Object = match ret {
-                    Err(LoxError::Return { value }) => value,
-                    _ => Object::None,
+                    Err(LoxError::Return { value }) => {
+                        if *is_initializer {
+                            environment::get_at(closure.clone(), 0, "this".to_owned()).unwrap()
+                        } else {
+                            value
+                        }
+                    }
+                    _ => {
+                        if *is_initializer {
+                            environment::get_at(closure.clone(), 0, "this".to_owned()).unwrap()
+                        } else {
+                            Object::None
+                        }
+                    }
                 };
-
-                //dbg!(ret_val.clone());
 
                 ret_val
             }
@@ -68,6 +83,7 @@ impl LoxCallable {
                 params,
                 body,
                 closure,
+                is_initializer,
             } => {
                 let environment = Rc::new(RefCell::new(Environment::new(Some(closure.clone()))));
                 environment.borrow_mut().define("this".to_owned(), instance);
@@ -76,6 +92,7 @@ impl LoxCallable {
                     params: params.clone(),
                     body: body.clone(),
                     closure: environment,
+                    is_initializer: *is_initializer,
                 }
             }
             LoxCallable::Native { .. } => unreachable!(),

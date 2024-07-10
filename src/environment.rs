@@ -66,10 +66,6 @@ pub fn get_at(
     distance: usize,
     name: String,
 ) -> Result<Object, LoxError> {
-    // dbg!(environment.clone());
-    // dbg!("----------------------------");
-    // let mut input = String::new();
-    // let _ = std::io::stdin().read_line(&mut input);
     if let Some(val) = ancestor(environment, distance)
         .borrow_mut()
         .values

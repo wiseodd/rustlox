@@ -97,10 +97,6 @@ impl Lox {
             }
         }
 
-        // dbg!(self.interpreter.borrow().globals.clone());
-        // dbg!(self.interpreter.borrow().environment.clone());
-        // dbg!(self.interpreter.borrow().locals.clone());
-
         self.interpreter.borrow_mut().interpret(statements);
     }
 

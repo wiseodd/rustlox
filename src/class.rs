@@ -10,8 +10,8 @@ pub struct LoxClass {
 }
 
 impl LoxClass {
-    pub fn new(name: String, methods: HashMap<String, LoxCallable>) -> Self {
-        LoxClass { name, methods }
+    pub fn new(name: String, methods: HashMap<String, LoxCallable>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(LoxClass { name, methods }))
     }
 
     pub fn find_method(&self, name: &str) -> Option<LoxCallable> {

@@ -11,7 +11,7 @@ pub enum Object {
     Number(f64),
     Boolean(bool),
     Callable(LoxCallable),
-    Class(LoxClass),
+    Class(Rc<RefCell<LoxClass>>),
     Instance(Rc<RefCell<LoxInstance>>),
     None,
 }

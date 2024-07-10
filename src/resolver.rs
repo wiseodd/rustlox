@@ -5,6 +5,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 enum FunctionType {
     None,
     Function,
+    Initializer,
     Method,
 }
 
@@ -67,7 +68,14 @@ impl Resolver {
                 for method in methods {
                     match *method.to_owned() {
                         Stmt::Function { params, body, .. } => {
-                            self.resolve_function(&params, &body, FunctionType::Method)
+                            let declaration: FunctionType;
+                            if name.lexeme.eq("init") {
+                                declaration = FunctionType::Initializer;
+                            } else {
+                                declaration = FunctionType::Method
+                            }
+
+                            self.resolve_function(&params, &body, declaration)
                         }
                         _ => unreachable!(),
                     }
@@ -112,7 +120,12 @@ impl Resolver {
                 };
 
                 if let Some(expr) = value {
-                    self.resolve_expr(expr);
+                    match self.current_function {
+                        FunctionType::Initializer => {
+                            Lox::parse_error(keyword, "Can't return a value from an initializer")
+                        }
+                        _ => self.resolve_expr(expr),
+                    }
                 }
             }
             Stmt::While { condition, body } => {
@@ -135,8 +148,6 @@ impl Resolver {
                         }
                     }
                 }
-                // dbg!(&self.scopes);
-                // dbg!(&name);
                 self.resolve_local(expr, name.clone());
             }
             Expr::Assign { name, value } => {

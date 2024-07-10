@@ -73,6 +73,7 @@ impl Interpreter {
                     params: params.clone(),
                     body: body.to_vec(),
                     closure: self.environment.clone(),
+                    is_initializer: false,
                 };
                 self.environment
                     .borrow_mut()
@@ -127,15 +128,11 @@ impl Interpreter {
             Stmt::Return { value, .. } => {
                 let ret_val: Object = match value {
                     Some(expr) => {
-                        //dbg!(expr.clone());
                         let res = self.evaluate(&expr)?;
-                        //dbg!(res.clone());
                         res
                     }
                     None => Object::None,
                 };
-
-                //dbg!(ret_val.clone());
 
                 Err(LoxError::Return { value: ret_val })
             }
@@ -144,12 +141,6 @@ impl Interpreter {
                     Some(init_expr) => self.evaluate(init_expr)?,
                     None => Object::None,
                 };
-
-                // dbg!(name);
-                // dbg!(environment.clone());
-                // dbg!("----------------------------");
-                // let mut input = String::new();
-                // let _ = std::io::stdin().read_line(&mut input);
 
                 self.environment
                     .borrow_mut()
@@ -176,6 +167,7 @@ impl Interpreter {
                             params: params.clone(),
                             body: body.to_vec(),
                             closure: self.environment.clone(),
+                            is_initializer: name.lexeme.eq("init"),
                         };
                         methods_stmts.insert(name.lexeme, function);
                     }
@@ -278,9 +270,27 @@ impl Interpreter {
                 }
 
                 match self.evaluate(callee)? {
-                    Object::Class(class) => Ok(Object::Instance(LoxInstance::new(Rc::new(
-                        RefCell::new(class.clone()),
-                    )))),
+                    Object::Class(class) => {
+                        let instance = Object::Instance(LoxInstance::new(class.clone()));
+
+                        if let Some(initializer) = class.borrow().find_method("init") {
+                            if arguments_vals.len() != initializer.arity() {
+                                return Err(LoxError::RuntimeError {
+                                    message: format!(
+                                        "Initializer expected {} arguments but got {}.",
+                                        initializer.arity(),
+                                        arguments.len()
+                                    ),
+                                    token: Some(paren.clone()),
+                                });
+                            }
+                            initializer
+                                .bind(instance.clone())
+                                .call(self, &arguments_vals);
+                        }
+
+                        Ok(instance)
+                    }
                     Object::Callable(function) => {
                         if arguments_vals.len() != function.arity() {
                             return Err(LoxError::RuntimeError {
@@ -501,7 +511,7 @@ fn stringify(obj: Object) -> String {
         Object::Boolean(val) => val.to_string(),
         Object::String(val) => format!("{val}"),
         Object::Callable(name) => format!("{name}"),
-        Object::Class(name) => format!("{name}"),
+        Object::Class(class) => format!("{}", class.borrow()),
         Object::Instance(instance) => format!("{}", instance.borrow()),
     }
 }

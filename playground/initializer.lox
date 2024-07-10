@@ -1,0 +1,12 @@
+class Foo {
+  init() {
+    this.x = 50;
+  }
+
+  get_x(y) {
+    return this.x / y;
+  }
+}
+
+var foo = Foo();
+print foo.get_x(213);
