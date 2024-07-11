@@ -1,6 +1,6 @@
 class Doughnut {
   init() {
-    this.name = "name";
+    this.name = "Generic Doughnut";
   }
 }
 
@@ -8,3 +8,12 @@ class BostonCream < Doughnut {}
 
 var boston_cream = BostonCream();
 print boston_cream.name;
+
+class StrawberryCheesecake < Doughnut {
+  init() {
+    this.name = "Strawberry Cheesecake";
+  }
+}
+
+var sc = StrawberryCheesecake();
+print sc.name;

@@ -24,7 +24,16 @@ impl LoxClass {
     }
 
     pub fn find_method(&self, name: &str) -> Option<LoxCallable> {
-        self.methods.get(name).map(|c| c.clone())
+        if self.methods.contains_key(name) {
+            return self.methods.get(name).map(|x| x.clone());
+        }
+
+        match self.superclass {
+            Object::Class(ref _superclass) => {
+                _superclass.borrow().find_method(name).map(|x| x.clone())
+            }
+            _ => None,
+        }
     }
 }
 
