@@ -6,12 +6,21 @@ use crate::{callable::LoxCallable, error::LoxError, object::Object, token::Token
 #[derive(Clone, Debug)]
 pub struct LoxClass {
     pub name: String,
+    pub superclass: Object,
     pub methods: HashMap<String, LoxCallable>,
 }
 
 impl LoxClass {
-    pub fn new(name: String, methods: HashMap<String, LoxCallable>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(LoxClass { name, methods }))
+    pub fn new(
+        name: String,
+        superclass: Object,
+        methods: HashMap<String, LoxCallable>,
+    ) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(LoxClass {
+            name,
+            superclass,
+            methods,
+        }))
     }
 
     pub fn find_method(&self, name: &str) -> Option<LoxCallable> {

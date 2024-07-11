@@ -164,7 +164,23 @@ impl Interpreter {
                     self.environment.clone(),
                 )))),
             ),
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
+                let mut superclass_obj = Object::None;
+                if let Some(_superclass) = superclass {
+                    if let Object::Class(class) = self.evaluate(_superclass)? {
+                        superclass_obj = Object::Class(class);
+                    } else if let Expr::Variable { name: _name } = _superclass {
+                        return Err(LoxError::RuntimeError {
+                            message: "Superclass must be a class.".to_owned(),
+                            token: Some(_name.clone()),
+                        });
+                    }
+                }
+
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.clone(), Object::None);
@@ -177,17 +193,19 @@ impl Interpreter {
                             params: params.clone(),
                             body: body.to_vec(),
                             closure: self.environment.clone(),
-                            is_initializer: name.eq("init"),
+                            is_initializer: name.lexeme.eq("init"),
                         };
                         methods_stmts.insert(name.lexeme, function);
                     }
                 }
 
-                let class = LoxClass::new(name.lexeme.clone(), methods_stmts);
+                let class = LoxClass::new(name.lexeme.clone(), superclass_obj, methods_stmts);
+
                 let _ = self
                     .environment
                     .borrow_mut()
                     .assign(name, Object::Class(class));
+
                 Ok(())
             }
         }

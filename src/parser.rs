@@ -70,9 +70,20 @@ impl Parser {
         }
     }
 
-    // classDecl -> "class" IDENTIFIER "{" function* "}" ;
+    // classDecl -> "class" ( "<" IDENTIFIER )? "{" function* "}" ;
     fn class_declaration(&mut self) -> Result<Stmt, LoxError> {
         let name: Token = self.consume(TokenType::Identifier, "Expect class name.")?;
+
+        let superclass: Option<Expr>;
+        if self.is_match_advance(&[TokenType::Less]) {
+            let _ = self.consume(TokenType::Identifier, "Expect superclass name.");
+            superclass = Some(Expr::Variable {
+                name: self.previous().clone(),
+            });
+        } else {
+            superclass = None;
+        }
+
         self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
 
         let mut methods: Vec<Box<Stmt>> = vec![];
@@ -82,7 +93,11 @@ impl Parser {
 
         let _ = self.consume(TokenType::RightBrace, "Expect '}' after class body.");
 
-        Ok(Stmt::Class { name, methods })
+        Ok(Stmt::Class {
+            name,
+            superclass,
+            methods,
+        })
     }
 
     // function -> IDENTIFIER "(" parameters? ")" block ;

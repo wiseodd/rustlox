@@ -52,12 +52,29 @@ impl Resolver {
                 // The immediate outer scope is now the head
                 self.end_scope();
             }
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
                 let enclosing_class: ClassType = self.current_class.clone();
                 self.current_class = ClassType::Class;
 
                 self.declare(name.clone());
                 self.define(name.clone());
+
+                if let Some(Expr::Variable {
+                    name: superclass_name,
+                }) = superclass
+                {
+                    if name.lexeme.eq(&superclass_name.lexeme) {
+                        Lox::parse_error(superclass_name, "A class cannot inherit from itself.");
+                    }
+                }
+
+                if let Some(_superclass) = superclass {
+                    self.resolve_expr(_superclass);
+                }
 
                 self.begin_scope();
                 self.scopes

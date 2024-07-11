@@ -1,0 +1,10 @@
+class Doughnut {
+  init() {
+    this.name = "name";
+  }
+}
+
+class BostonCream < Doughnut {}
+
+var boston_cream = BostonCream();
+print boston_cream.name;
