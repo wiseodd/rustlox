@@ -8,7 +8,7 @@ type OptPointer<T> = Option<Rc<RefCell<T>>>;
 
 #[derive(Debug, Default, Clone)]
 pub struct Environment {
-    enclosing: OptPointer<Environment>,
+    pub enclosing: OptPointer<Environment>,
     values: HashMap<String, Object>,
 }
 

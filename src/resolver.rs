@@ -72,8 +72,12 @@ impl Resolver {
                     }
                 }
 
-                if let Some(_superclass) = superclass {
-                    self.resolve_expr(_superclass);
+                if !superclass.is_none() {
+                    self.begin_scope();
+                    self.scopes
+                        .last_mut()
+                        .unwrap()
+                        .insert("super".to_owned(), true);
                 }
 
                 self.begin_scope();
@@ -96,6 +100,10 @@ impl Resolver {
                         }
                         _ => unreachable!(),
                     }
+                }
+
+                if !superclass.is_none() {
+                    self.end_scope();
                 }
 
                 self.end_scope();
@@ -191,6 +199,7 @@ impl Resolver {
                 self.resolve_expr(value);
                 self.resolve_expr(object);
             }
+            Expr::Super { keyword, .. } => self.resolve_local(&expr, keyword.clone()),
             Expr::This { keyword } => match self.current_class {
                 ClassType::Class => self.resolve_local(expr, keyword.clone()),
                 ClassType::None => {
@@ -206,7 +215,6 @@ impl Resolver {
             Expr::Unary { right, .. } => {
                 self.resolve_expr(right);
             }
-            _ => unreachable!(),
         };
     }
 

@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 use crate::{
     error::LoxError,
     expr::Expr,
@@ -549,7 +547,9 @@ impl Parser {
         })
     }
 
-    // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
+    // primary -> "true" | "false" | "nil" | "this"
+    //            | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+    //            | "super" "." IDENTIFIER ;
     fn primary(&mut self) -> Result<Expr, LoxError> {
         if self.is_match_advance(&[TokenType::Number, TokenType::String]) {
             return Ok(Expr::Literal {
@@ -581,6 +581,14 @@ impl Parser {
             return Ok(Expr::Grouping {
                 expression: Box::new(expr),
             });
+        }
+
+        if self.is_match_advance(&[TokenType::Super]) {
+            let keyword: Token = self.previous().clone();
+            let _ = self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
+            let method: Token =
+                self.consume(TokenType::Identifier, "Expect superclass method name.")?;
+            return Ok(Expr::Super { keyword, method });
         }
 
         if self.is_match_advance(&[TokenType::This]) {

@@ -128,15 +128,11 @@ impl Interpreter {
             Stmt::Return { value, .. } => {
                 let ret_val: Object = match value {
                     Some(expr) => {
-                        //dbg!(expr.clone());
                         let res = self.evaluate(&expr)?;
-                        //dbg!(res.clone());
                         res
                     }
                     None => Object::None,
                 };
-
-                //dbg!(ret_val.clone());
 
                 Err(LoxError::Return { value: ret_val })
             }
@@ -145,12 +141,6 @@ impl Interpreter {
                     Some(init_expr) => self.evaluate(init_expr)?,
                     None => Object::None,
                 };
-
-                // dbg!(name);
-                // dbg!(environment.clone());
-                // dbg!("----------------------------");
-                // let mut input = String::new();
-                // let _ = std::io::stdin().read_line(&mut input);
 
                 self.environment
                     .borrow_mut()
@@ -185,6 +175,15 @@ impl Interpreter {
                     .borrow_mut()
                     .define(name.lexeme.clone(), Object::None);
 
+                if !superclass.is_none() {
+                    self.environment = Rc::new(RefCell::new(Environment::new(Some(
+                        self.environment.clone(),
+                    ))));
+                    self.environment
+                        .borrow_mut()
+                        .define("super".to_owned(), superclass_obj.clone());
+                }
+
                 let mut methods_stmts: HashMap<String, LoxCallable> = HashMap::new();
                 for method in methods {
                     if let Stmt::Function { name, params, body } = *method.to_owned() {
@@ -200,6 +199,10 @@ impl Interpreter {
                 }
 
                 let class = LoxClass::new(name.lexeme.clone(), superclass_obj, methods_stmts);
+
+                if !superclass.is_none() {
+                    self.environment = self.environment.clone().borrow().enclosing.clone().unwrap();
+                }
 
                 let _ = self
                     .environment
@@ -362,6 +365,27 @@ impl Interpreter {
                     token: Some(name.clone()),
                 }),
             },
+            Expr::Super { method, .. } => {
+                let distance: usize = *self.locals.get(&expr).unwrap();
+                let superclass =
+                    environment::get_at(self.environment.clone(), distance, "super".to_owned())?;
+                let instance =
+                    environment::get_at(self.environment.clone(), distance - 1, "this".to_owned())?;
+
+                let maybe_method = if let Object::Class(_superclass) = superclass {
+                    _superclass.borrow().find_method(&method.lexeme)
+                } else {
+                    None
+                };
+
+                match maybe_method {
+                    Some(method) => Ok(Object::Callable(method.bind(instance))),
+                    _ => Err(LoxError::RuntimeError {
+                        message: format!("Undefined property '{}'.", method.lexeme),
+                        token: Some(method.clone()),
+                    }),
+                }
+            }
             Expr::This { keyword } => {
                 return self.look_up_variable(keyword, expr);
             }
@@ -487,10 +511,6 @@ impl Interpreter {
                     }),
                 }
             }
-            _ => Err(LoxError::RuntimeError {
-                message: "Unsupported expression.".to_owned(),
-                token: None,
-            }),
         }
     }
 
