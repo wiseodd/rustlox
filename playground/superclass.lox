@@ -23,6 +23,7 @@ class StrawberryCheesecake < Doughnut {
 
 var sc = StrawberryCheesecake();
 print sc.name;
+sc.cook();
 
 print "-------------------------------------";
 

@@ -13,6 +13,7 @@ enum FunctionType {
 enum ClassType {
     None,
     Class,
+    Subclass,
 }
 
 // #[derive(Debug, Default, Clone)]
@@ -73,6 +74,9 @@ impl Resolver {
                 }
 
                 if !superclass.is_none() {
+                    self.current_class = ClassType::Subclass;
+                    self.resolve_expr(&superclass.clone().unwrap());
+
                     self.begin_scope();
                     self.scopes
                         .last_mut()
@@ -199,12 +203,20 @@ impl Resolver {
                 self.resolve_expr(value);
                 self.resolve_expr(object);
             }
-            Expr::Super { keyword, .. } => self.resolve_local(&expr, keyword.clone()),
+            Expr::Super { keyword, .. } => {
+                if matches!(self.current_class, ClassType::None) {
+                    Lox::parse_error(keyword, "Can't use 'super' outside of a class.");
+                } else if !matches!(self.current_class, ClassType::Subclass) {
+                    Lox::parse_error(keyword, "Can't use 'super' in a class with no superclass.");
+                }
+
+                self.resolve_local(&expr, keyword.clone())
+            }
             Expr::This { keyword } => match self.current_class {
-                ClassType::Class => self.resolve_local(expr, keyword.clone()),
                 ClassType::None => {
                     Lox::parse_error(keyword, "Can't use 'this' outside of a class.")
                 }
+                _ => self.resolve_local(expr, keyword.clone()),
             },
             Expr::Grouping { expression } => self.resolve_expr(expression),
             Expr::Literal { .. } => (),
